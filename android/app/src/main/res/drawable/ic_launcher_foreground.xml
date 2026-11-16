@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- antennas -->
+    <path android:strokeColor="#2B2845" android:strokeWidth="3" android:strokeLineCap="round"
+        android:pathData="M46,34 L40,24 M62,34 L68,24" />
+    <!-- tv body -->
+    <path android:fillColor="#FF8B3D"
+        android:pathData="M30,34 h48 a8,8 0 0 1 8,8 v28 a8,8 0 0 1 -8,8 h-48 a8,8 0 0 1 -8,-8 v-28 a8,8 0 0 1 8,-8 z" />
+    <!-- screen -->
+    <path android:fillColor="#FFF6EA"
+        android:pathData="M34,40 h40 a4,4 0 0 1 4,4 v24 a4,4 0 0 1 -4,4 h-40 a4,4 0 0 1 -4,-4 v-24 a4,4 0 0 1 4,-4 z" />
+    <!-- heart -->
+    <path android:fillColor="#F2557A"
+        android:pathData="M54,66 C44,59 41,54 44,50 C46.5,47 51,47.5 54,51 C57,47.5 61.5,47 64,50 C67,54 64,59 54,66 z" />
+</vector>

@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Baby Cam">
+<meta name="theme-color" content="#14132a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<title>Baby Cam</title>
+<style>
+  :root {
+    --bg: #14132a; --card: #22213f; --ink: #ffffff; --sub: #b9b8d6;
+    --orange: #ff8b3d; --green: #2fc46b; --blue: #4d8dff; --red: #ff5a5f; --line: rgba(255,255,255,.12);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, sans-serif; }
+  body { padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 10px; padding: 14px 2px 10px; }
+  header h1 { font-size: 22px; margin: 0; flex: 1; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--sub); box-shadow: 0 0 0 4px rgba(255,255,255,.06); }
+  .dot.live { background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(47,196,107,.15); } }
+  .hidden { display: none !important; }
+  .card { background: var(--card); border-radius: 22px; padding: 18px; border: 1px solid var(--line); }
+  label { display: block; color: var(--sub); font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
+  input { width: 100%; font-size: 22px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line);
+    background: #2c2b4d; color: var(--ink); outline: none; }
+  input:focus { border-color: var(--blue); }
+  input.code { letter-spacing: .3em; text-align: center; font-weight: 700; }
+  button { font: inherit; font-weight: 700; border: 0; border-radius: 999px; padding: 14px 18px; color: #fff;
+    background: var(--blue); min-height: 50px; cursor: pointer; }
+  button.wide { width: 100%; margin-top: 18px; font-size: 18px; }
+  button.ghost { background: rgba(255,255,255,.1); }
+  .muted { color: var(--sub); font-size: 14px; }
+  .err { color: #ffb0b3; font-weight: 600; min-height: 1.4em; margin-top: 10px; }
+  #stage { position: relative; width: 100%; border-radius: 22px; overflow: hidden; background: #000;
+    aspect-ratio: 3 / 4; max-height: 68vh; border: 1px solid var(--line); }
+  #stage img { position: absolute; left: 50%; top: 50%; object-fit: contain; transform-origin: center; }
+  #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 8px; color: var(--sub); text-align: center; padding: 20px; }
+  .spinner { width: 34px; height: 34px; border: 4px solid rgba(255,255,255,.15); border-top-color: var(--orange);
+    border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+  .chip { background: rgba(255,255,255,.08); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; }
+  .chip.on { background: rgba(255,139,61,.2); color: #ffc79f; }
+  .row { display: flex; gap: 10px; }
+  .row button { flex: 1; }
+  .now { font-size: 15px; margin: 4px 2px 0; color: var(--sub); }
+  .now b { color: var(--ink); }
+  footer { margin-top: auto; padding: 18px 2px 12px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <span class="dot" id="dot"></span>
+  <h1 id="title">Baby Cam</h1>
+  <button class="ghost hidden" id="logout" style="min-height:40px;padding:8px 14px;font-size:14px">Code</button>
+</header>
+
+<!-- Shown on GitHub Pages: where is the phone? -->
+<section id="launcher" class="card hidden">
+  <div style="font-size:20px;font-weight:700">Connect to her phone</div>
+  <p class="muted">Open <b>Avriella TV → Manage → Baby cam</b> on her phone. It shows an address like <b>http://192.168.1.23:8080</b> and a 6-digit code. Your iPhone must be on the same Wi-Fi.</p>
+  <label for="addr">Phone address</label>
+  <input id="addr" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="192.168.1.23:8080">
+  <button class="wide" id="go">Open baby cam</button>
+  <p class="muted" style="margin-top:14px">Tip: once it opens, tap Share → <b>Add to Home Screen</b> on that page. Then it opens straight to the camera.</p>
+</section>
+
+<!-- Code entry (served from the phone) -->
+<section id="login" class="card hidden">
+  <div style="font-size:20px;font-weight:700">Enter the code</div>
+  <p class="muted">Find it on her phone in <b>Manage → Baby cam</b>.</p>
+  <input id="code" class="code" inputmode="numeric" maxlength="7" placeholder="000000" autocomplete="one-time-code">
+  <div class="err" id="loginErr"></div>
+  <button class="wide" id="loginBtn">Watch</button>
+</section>
+
+<!-- Viewer -->
+<section id="viewer" class="hidden">
+  <div id="stage">
+    <img id="cam" alt="Live camera">
+    <div id="overlay"><div class="spinner"></div><div id="overlayText">Connecting…</div></div>
+  </div>
+  <p class="now" id="now"></p>
+  <div class="chips">
+    <span class="chip" id="mode">…</span>
+    <span class="chip" id="battery">🔋 –</span>
+  </div>
+  <div class="row">
+    <button class="ghost" id="flip">🔄 Back cam</button>
+    <button class="ghost" id="rotate">↻ Rotate</button>
+    <button class="ghost" id="mirror">⇋ Mirror</button>
+    <button class="ghost" id="snap">📸 Photo</button>
+  </div>
+  <p class="muted" style="margin-top:14px">The camera only runs while you're watching and while a show or game is on. If the screen says “waiting”, she's probably back in the menu.</p>
+</section>
+
+<footer class="muted" id="foot"></footer>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+  };
+  function show(id) {
+    ["launcher", "login", "viewer"].forEach(function (s) { $(s).classList.toggle("hidden", s !== id); });
+    $("logout").classList.toggle("hidden", id !== "viewer");
+  }
+
+  // ---------- Hosted on GitHub Pages (https): just help find the phone ----------
+  var onPhone = location.protocol === "http:" && location.pathname.indexOf("/api/") !== 0 && !/github\.io$/.test(location.hostname);
+  if (!onPhone) {
+    show("launcher");
+    $("addr").value = store.get("addr") || "";
+    $("foot").textContent = "This page only connects to her phone on your home Wi-Fi. Nothing is uploaded anywhere.";
+    $("go").onclick = function () {
+      var a = $("addr").value.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+      if (!a) { $("addr").focus(); return; }
+      if (a.indexOf(":") < 0) a += ":8080";
+      store.set("addr", a);
+      location.href = "http://" + a + "/";
+    };
+    return;
+  }
+
+  // ---------- Served from her phone: the real viewer ----------
+  var hashCode = (location.hash.match(/code=(\d{6})/) || [])[1];
+  if (hashCode) { store.set("code", hashCode); history.replaceState(null, "", location.pathname); }
+  var code = store.get("code");
+  var userRot = parseInt(store.get("rot") || "0", 10);
+  var mirror = store.get("mirror") ? store.get("mirror") === "1" : store.get("cam") !== "back";
+  var deviceRot = 270;
+  var infoTimer = null, retryTimer = null, streaming = false, lastFrameAt = 0;
+
+  var camSide = store.get("cam") === "back" ? "back" : "front";
+  function api(p) { return "/api/" + p + "?key=" + encodeURIComponent(code) + "&cam=" + camSide + "&t=" + Date.now(); }
+  function flipLabel() { $("flip").textContent = camSide === "front" ? "🔄 Back cam" : "🔄 Front cam"; }
+
+  function login() {
+    show("login");
+    $("code").value = "";
+    setTimeout(function () { $("code").focus(); }, 50);
+  }
+  $("loginBtn").onclick = function () {
+    var c = $("code").value.replace(/\D/g, "");
+    if (c.length !== 6) { $("loginErr").textContent = "The code has 6 numbers."; return; }
+    $("loginErr").textContent = "Checking…";
+    fetch("/api/info?key=" + c, { cache: "no-store" }).then(function (r) {
+      if (r.status === 401) throw new Error("bad");
+      return r.json();
+    }).then(function () {
+      code = c; store.set("code", c); $("loginErr").textContent = ""; startViewer();
+    }).catch(function (e) {
+      $("loginErr").textContent = e.message === "bad" ? "That code isn't right." : "Can't reach her phone. Same Wi-Fi?";
+    });
+  };
+  $("code").addEventListener("keydown", function (e) { if (e.key === "Enter") $("loginBtn").click(); });
+  $("logout").onclick = function () { stopStream(); store.del("code"); code = null; login(); };
+
+  function layout() {
+    var stage = $("stage"), img = $("cam");
+    var W = stage.clientWidth, H = stage.clientHeight;
+    var rot = (deviceRot + userRot) % 360;
+    var sideways = rot === 90 || rot === 270;
+    img.style.width = (sideways ? H : W) + "px";
+    img.style.height = (sideways ? W : H) + "px";
+    img.style.transform = "translate(-50%,-50%) rotate(" + rot + "deg)" + (mirror ? " scaleX(-1)" : "");
+  }
+  window.addEventListener("resize", layout);
+
+  function overlay(text, spin) {
+    $("overlay").classList.toggle("hidden", !text);
+    $("overlayText").textContent = text || "";
+    $("overlay").querySelector(".spinner").style.display = spin ? "" : "none";
+  }
+
+  function startStream() {
+    clearTimeout(retryTimer);
+    streaming = true;
+    var img = $("cam");
+    img.onload = function () { lastFrameAt = Date.now(); overlay(""); $("dot").classList.add("live"); };
+    img.onerror = function () {
+      $("dot").classList.remove("live");
+      overlay("Waiting for her phone…", true);
+      if (streaming) retryTimer = setTimeout(startStream, 3000);
+    };
+    overlay("Starting camera…", true);
+    img.src = api("stream");
+  }
+  function stopStream() {
+    streaming = false;
+    clearTimeout(retryTimer);
+    $("cam").src = "";
+    $("dot").classList.remove("live");
+  }
+
+  var modeText = { watching: "📺 Watching a show", playing: "🎮 Playing a game", sleeping: "🌙 Sleep screen", menu: "🏠 In the parent menu" };
+  function pollInfo() {
+    fetch(api("info"), { cache: "no-store" }).then(function (r) {
+      if (r.status === 401) { stopStream(); store.del("code"); login(); throw new Error("auth"); }
+      return r.json();
+    }).then(function (j) {
+      $("title").textContent = (j.name || "Baby") + " cam";
+      document.title = (j.name || "Baby") + " cam";
+      $("mode").textContent = modeText[j.mode] || j.mode;
+      $("mode").classList.toggle("on", j.mode === "watching" || j.mode === "playing");
+      $("battery").textContent = (j.charging ? "⚡ " : "🔋 ") + j.battery + "%";
+      $("now").innerHTML = j.nowPlaying ? "Now: <b></b>" : "";
+      if (j.nowPlaying) $("now").querySelector("b").textContent = j.nowPlaying;
+      if (typeof j.rotation === "number" && j.rotation !== deviceRot) { deviceRot = j.rotation; layout(); }
+      if (j.error) overlay(j.error, false);
+      if (!streaming && !document.hidden) startStream();
+    }).catch(function (e) {
+      if (e.message !== "auth") { $("mode").textContent = "Can't reach her phone"; $("mode").classList.remove("on"); }
+    });
+  }
+
+  function startViewer() {
+    show("viewer");
+    layout();
+    pollInfo();
+    startStream();
+    clearInterval(infoTimer);
+    infoTimer = setInterval(function () {
+      pollInfo();
+      // MJPEG stalls silently sometimes on iOS; kick it if no frame for a while
+      if (streaming && lastFrameAt && Date.now() - lastFrameAt > 12000) { lastFrameAt = 0; startStream(); }
+    }, 4000);
+  }
+
+  $("flip").onclick = function () {
+    camSide = camSide === "front" ? "back" : "front";
+    store.set("cam", camSide);
+    mirror = camSide === "front"; store.set("mirror", mirror ? "1" : "0");
+    flipLabel(); layout(); stopStream(); pollInfo(); startStream();
+  };
+  flipLabel();
+  $("rotate").onclick = function () { userRot = (userRot + 90) % 360; store.set("rot", userRot); layout(); };
+  $("mirror").onclick = function () { mirror = !mirror; store.set("mirror", mirror ? "1" : "0"); layout(); };
+  $("snap").onclick = function () { window.open(api("snap"), "_blank"); };
+
+  // Save her phone's battery: stop the camera when this iPhone screen is off / app hidden.
+  document.addEventListener("visibilitychange", function () {
+    if (!code || $("viewer").classList.contains("hidden")) return;
+    if (document.hidden) stopStream(); else { pollInfo(); startStream(); }
+  });
+
+  $("foot").textContent = "Connected to " + location.host + " on your Wi-Fi";
+  if (code) startViewer(); else login();
+})();
+</script>
+</body>
+</html>
