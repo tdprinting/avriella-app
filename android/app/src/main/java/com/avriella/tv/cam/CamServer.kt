@@ -29,6 +29,11 @@ object CamState {
     @Volatile var running = false
     @Volatile var port = 8080
     @Volatile var viewers = 0
+    @Volatile var videoId: String? = null
+    @Volatile var shelfId: String? = null
+    @Volatile var posMs = 0L
+    @Volatile var durMs = 0L
+    @Volatile var playing = false
 
     /** IPv4 addresses the iPhones can use. Wi-Fi first; Tailscale (100.x) works from away. */
     fun addresses(): List<String> {
@@ -122,6 +127,16 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     JSONObject().put("app", "avriella-tv").put("name", Library.settings.childName).put("port", CamState.port).toString().toByteArray())
                 "/api/info" -> if (authed) send(out, 200, "application/json", info().toByteArray()) else denied(out)
                 "/api/snap" -> if (authed) snap(out) else denied(out)
+                "/api/library" -> if (authed) {
+                    val json = Remote.onMain { libraryJson() } ?: "{\"error\":\"busy\"}"
+                    send(out, 200, "application/json", json.toByteArray())
+                } else denied(out)
+                "/api/thumb" -> if (authed) thumb(out, query["id"] ?: "") else denied(out)
+                "/api/control" -> if (authed) {
+                    val res = Remote.send(Remote.Cmd(query["action"] ?: "", query["video"], query["shelf"]))
+                    val body = if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)
+                    send(out, 200, "application/json", body.toString().toByteArray())
+                } else denied(out)
                 "/api/stream" -> if (authed) stream(sock, out) else denied(out)
                 else -> send(out, 404, "text/plain", "Not found".toByteArray())
             }
@@ -150,9 +165,38 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("charging", bm.isCharging)
             put("rotation", if (cam.useBack) (cam.sensorOrientation - rot + 360) % 360 else (cam.sensorOrientation + rot) % 360)
             put("camera", if (cam.useBack) "back" else "front")
+            put("videoId", CamState.videoId ?: "")
+            put("shelfId", CamState.shelfId ?: "")
+            put("pos", CamState.posMs)
+            put("dur", CamState.durMs)
+            put("playing", CamState.playing)
             put("viewers", CamState.viewers)
             put("error", cam.error ?: "")
         }.toString()
+    }
+
+    /** Everything saved on her phone: shows, playlists and videos (built on the main thread). */
+    private fun libraryJson(): String {
+        val o = JSONObject()
+        o.put("shelves", org.json.JSONArray().apply {
+            Library.shelves.forEach { s ->
+                put(JSONObject().put("id", s.id).put("name", s.name).put("emoji", s.emoji)
+                    .put("kind", s.kind).put("ids", org.json.JSONArray(s.videoIds)))
+            }
+        })
+        o.put("videos", org.json.JSONArray().apply {
+            Library.videosIn(Library.ALL).forEach { v ->
+                put(JSONObject().put("id", v.id).put("title", v.title).put("dur", v.durationMs).put("pos", v.positionMs))
+            }
+        })
+        return o.toString()
+    }
+
+    private fun thumb(out: OutputStream, id: String) {
+        val safe = id.filter { it.isLetterOrDigit() }
+        val f = java.io.File(ctx.filesDir, "thumbs/$safe.jpg")
+        if (safe.isEmpty() || !f.exists()) send(out, 404, "text/plain", "no thumb".toByteArray())
+        else send(out, 200, "image/jpeg", f.readBytes())
     }
 
     private fun snap(out: OutputStream) {

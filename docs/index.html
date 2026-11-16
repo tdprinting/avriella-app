@@ -104,6 +104,39 @@
   .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; font-size: 15px; }
   .steps li::before { content: counter(s); flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
     font-weight: 800; font-size: 14px; background: linear-gradient(135deg, var(--yellow), var(--orange)); color: #5a2200; }
+  .nowrow { display: flex; gap: 14px; align-items: center; }
+  .thumb { flex: none; width: 96px; aspect-ratio: 16 / 10; border-radius: 16px; overflow: hidden; position: relative;
+    background: linear-gradient(135deg, var(--sky), var(--violet)); border: 1px solid var(--edge); }
+  .thumb::before { content: "🎬"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 26px; }
+  .thumb img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .thumb img[src=""] { display: none; }
+  .thumb.big { width: 100%; border-radius: 22px; }
+  .thumb.big::before { font-size: 48px; }
+  .bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.22); margin: 14px 0 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--yellow), var(--orange)); transition: width .8s linear; }
+  .times { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); font-weight: 700; }
+  .transport { display: flex; justify-content: center; gap: 18px; margin-top: 10px; }
+  .transport button { width: 60px; height: 60px; padding: 0; font-size: 24px; background: var(--glass-hi); border: 1px solid var(--edge); }
+  .transport button.pp { width: 72px; height: 72px; font-size: 30px; background: linear-gradient(135deg, var(--orange), var(--pink));
+    box-shadow: 0 8px 24px rgba(255,95,162,.45); }
+  .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin: 0 -4px 6px; padding-left: 4px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs button { flex: none; min-height: 42px; padding: 8px 16px; font-size: 15px; background: rgba(255,255,255,.14); border: 1px solid var(--edge); }
+  .tabs button.on { background: #fff; color: #7a2a8a; }
+  .vid { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px; margin: 8px 0 0;
+    border-radius: 20px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); min-height: 0; font-weight: 700; }
+  .vid .t { flex: 1; min-width: 0; font-size: 15px; line-height: 1.25; }
+  .vid .t small { display: block; color: var(--sub); font-size: 12px; margin-top: 3px; }
+  .vid.cur { background: rgba(52,211,153,.28); border-color: rgba(167,243,208,.8); }
+  .vid .go { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 16px;
+    background: linear-gradient(135deg, var(--orange), var(--pink)); }
+  .vid .mini { height: 4px; border-radius: 4px; background: rgba(255,255,255,.2); margin-top: 6px; overflow: hidden; }
+  .vid .mini i { display: block; height: 100%; background: var(--yellow); }
+  .sheet { position: fixed; inset: 0; z-index: 10; background: rgba(20,5,40,.45); display: flex; align-items: flex-end; justify-content: center;
+    padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .sheet-card { width: 100%; max-width: 480px; padding: 18px; text-align: center; background: rgba(90,40,140,.55); }
+  .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%); z-index: 20;
+    padding: 12px 18px; border-radius: 999px; font-weight: 800; background: rgba(30,10,60,.85); max-width: 90vw; text-align: center; }
   footer { margin-top: auto; padding: 16px 4px 6px; text-align: center; font-size: 13px; }
 </style>
 </head>
@@ -178,12 +211,30 @@
     <div class="glass pill" id="mode">…</div>
     <div class="glass pill" id="battery">🔋 –</div>
   </div>
-  <div class="glass now hidden" id="nowBox"><small>Now playing</small><b id="now"></b></div>
+  <div class="glass now hidden" id="nowBox">
+    <div class="nowrow">
+      <div class="thumb" id="nowThumbWrap"><img id="nowThumb" alt=""></div>
+      <div style="min-width:0;flex:1"><small>Now playing</small><b id="now"></b></div>
+    </div>
+    <div class="bar"><i id="nowBar"></i></div>
+    <div class="times"><span id="nowPos">0:00</span><span id="nowDur"></span></div>
+    <div class="transport">
+      <button id="prevBtn" aria-label="Previous">⏮</button>
+      <button id="ppBtn" class="pp" aria-label="Pause">⏸</button>
+      <button id="nextBtn" aria-label="Next">⏭</button>
+    </div>
+  </div>
   <div class="controls">
     <button id="flip"><span>🔄</span><em id="flipText" style="font-style:normal">Back cam</em></button>
     <button id="rotate"><span>↻</span>Rotate</button>
     <button id="mirror"><span>🪞</span>Mirror</button>
     <button id="snap"><span>📸</span>Photo</button>
+  </div>
+  <div class="glass card" id="libCard">
+    <h2>📺 Pick a video</h2>
+    <p class="muted" style="margin:0 0 10px">Saved on her phone. Tap one to play it there.</p>
+    <div class="tabs" id="shelfTabs"></div>
+    <div id="vidList"><p class="muted">Loading her videos…</p></div>
   </div>
   <div class="glass card">
     <label class="switch"><input type="checkbox" id="autoFind"> <span>Auto-find her phone if its Wi-Fi address changes</span></label>
@@ -191,6 +242,18 @@
   </div>
   <p class="muted" style="text-align:center;margin:4px 8px 0">The camera only runs while you watch and while a show or game is on. Her video keeps playing.</p>
 </section>
+
+<div class="sheet hidden" id="sheet">
+  <div class="glass sheet-card">
+    <div class="thumb big" id="sheetThumbWrap"><img id="sheetThumb" alt=""></div>
+    <h2 id="sheetTitle" style="margin-top:12px"></h2>
+    <p class="muted" id="sheetSub" style="margin:0"></p>
+    <div class="err" id="sheetErr"></div>
+    <button class="wide btn-main" id="sheetPlay">▶ Play on her phone</button>
+    <button class="wide btn-soft" id="sheetCancel" style="margin-top:10px">Cancel</button>
+  </div>
+</div>
+<div class="toast hidden" id="toast"></div>
 
 <footer class="muted" id="foot"></footer>
 
@@ -354,8 +417,7 @@
       $("mode").textContent = modeText[j.mode] || j.mode;
       $("mode").classList.toggle("on", j.mode === "watching" || j.mode === "playing");
       $("battery").textContent = (j.charging ? "⚡ " : "🔋 ") + j.battery + "%";
-      $("now").textContent = j.nowPlaying || "";
-      $("nowBox").classList.toggle("hidden", !j.nowPlaying);
+      updateNow(j);
       if (typeof j.rotation === "number" && j.rotation !== deviceRot) { deviceRot = j.rotation; layout(); }
       if (j.error) overlay(j.error, false);
       if (!streaming && !document.hidden) startStream();
@@ -429,6 +491,9 @@
     layout();
     pollInfo();
     startStream();
+    loadLibrary();
+    clearInterval(libTimer);
+    libTimer = setInterval(loadLibrary, 60000);
     clearInterval(infoTimer);
     infoTimer = setInterval(function () {
       pollInfo();
@@ -447,6 +512,147 @@
   $("rotate").onclick = function () { userRot = (userRot + 90) % 360; store.set("rot", userRot); layout(); };
   $("mirror").onclick = function () { mirror = !mirror; store.set("mirror", mirror ? "1" : "0"); layout(); };
   $("snap").onclick = function () { window.open(api("snap"), "_blank"); };
+
+  // ---------- Now playing + remote control of her phone ----------
+  var lib = null, libTimer = null, curVideo = "", curShelf = "", isPlaying = false, tab = store.get("tab") || "__all__";
+
+  function fmt(ms) {
+    var s = Math.max(0, Math.floor((ms || 0) / 1000)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+    return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0");
+  }
+  function mins(ms) { var m = Math.round((ms || 0) / 60000); return !ms ? "" : m >= 60 ? Math.floor(m / 60) + "h " + (m % 60) + "m" : Math.max(1, m) + " min"; }
+  function thumbUrl(id) { return "/api/thumb?key=" + encodeURIComponent(code) + "&id=" + encodeURIComponent(id); }
+  function setThumb(img, id) {
+    var url = id ? thumbUrl(id) : "";
+    if (img.getAttribute("data-id") === id) return;
+    img.setAttribute("data-id", id || "");
+    img.onerror = function () { img.setAttribute("src", ""); };
+    img.setAttribute("src", url);
+  }
+  var toastTimer = null;
+  function toast(t) {
+    $("toast").textContent = t; $("toast").classList.remove("hidden");
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { $("toast").classList.add("hidden"); }, 2600);
+  }
+
+  function updateNow(j) {
+    var show = !!(j.nowPlaying);
+    $("nowBox").classList.toggle("hidden", !show);
+    $("now").textContent = j.nowPlaying || "";
+    var isVideo = !!j.videoId;
+    $("nowThumbWrap").classList.toggle("hidden", !isVideo);
+    document.querySelector("#nowBox .bar").classList.toggle("hidden", !isVideo);
+    document.querySelector("#nowBox .times").classList.toggle("hidden", !isVideo);
+    document.querySelector("#nowBox .transport").classList.toggle("hidden", !isVideo);
+    if (isVideo) {
+      setThumb($("nowThumb"), j.videoId);
+      $("nowBar").style.width = (j.dur > 0 ? Math.min(100, 100 * j.pos / j.dur) : 0) + "%";
+      $("nowPos").textContent = fmt(j.pos);
+      $("nowDur").textContent = j.dur > 0 ? fmt(j.dur) : "";
+    }
+    isPlaying = !!j.playing && j.mode !== "sleeping";
+    $("ppBtn").textContent = isPlaying ? "⏸" : "▶";
+    if (curVideo !== (j.videoId || "") || curShelf !== (j.shelfId || "")) {
+      curVideo = j.videoId || ""; curShelf = j.shelfId || "";
+      renderList();
+    }
+  }
+
+  function control(action, extra) {
+    var url = "/api/control?key=" + encodeURIComponent(code) + "&action=" + action + (extra || "");
+    return fetch(url, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.error) throw new Error(j.error);
+      setTimeout(pollInfo, 400); setTimeout(pollInfo, 1500);
+      return j;
+    });
+  }
+  $("ppBtn").onclick = function () {
+    control(isPlaying ? "pause" : "resume").catch(function (e) { toast(e.message); });
+    isPlaying = !isPlaying; $("ppBtn").textContent = isPlaying ? "⏸" : "▶";
+  };
+  $("nextBtn").onclick = function () { control("next").then(function () { toast("⏭ Next video"); }).catch(function (e) { toast(e.message); }); };
+  $("prevBtn").onclick = function () { control("prev").then(function () { toast("⏮ Previous video"); }).catch(function (e) { toast(e.message); }); };
+
+  function loadLibrary() {
+    fetch("/api/library?key=" + encodeURIComponent(code) + "&t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j.videos) { lib = j; renderTabs(); renderList(); } })
+      .catch(function () {});
+  }
+
+  function renderTabs() {
+    var box = $("shelfTabs");
+    box.textContent = "";
+    var tabs = [{ id: "__all__", name: "All videos", emoji: "🎞️" }].concat(lib.shelves);
+    if (!tabs.some(function (t) { return t.id === tab; })) tab = "__all__";
+    tabs.forEach(function (t) {
+      var b = document.createElement("button");
+      b.textContent = t.emoji + " " + t.name;
+      b.className = t.id === tab ? "on" : "";
+      b.onclick = function () { tab = t.id; store.set("tab", tab); renderTabs(); renderList(); };
+      box.appendChild(b);
+    });
+  }
+
+  function renderList() {
+    if (!lib) return;
+    var box = $("vidList");
+    box.textContent = "";
+    var byId = {};
+    lib.videos.forEach(function (v) { byId[v.id] = v; });
+    var shelf = lib.shelves.filter(function (s) { return s.id === tab; })[0];
+    var list = shelf ? shelf.ids.map(function (id) { return byId[id]; }).filter(Boolean) : lib.videos;
+    if (!list.length) {
+      var p = document.createElement("p"); p.className = "muted";
+      p.textContent = lib.videos.length ? "No videos in this one yet." : "No videos saved on her phone yet. Add them in the app on her phone (Manage → Add videos).";
+      box.appendChild(p); return;
+    }
+    list.forEach(function (v, i) {
+      var b = document.createElement("button");
+      b.className = "vid" + (v.id === curVideo ? " cur" : "");
+      var th = document.createElement("div"); th.className = "thumb";
+      var img = document.createElement("img"); img.alt = ""; img.loading = "lazy";
+      setThumb(img, v.id); th.appendChild(img);
+      var t = document.createElement("div"); t.className = "t";
+      var name = document.createElement("div"); name.textContent = v.title;
+      var sm = document.createElement("small");
+      var bits = [];
+      if (v.id === curVideo) bits.push("▶ Playing now");
+      if (v.dur) bits.push(mins(v.dur));
+      if (v.dur && v.pos > 5000) bits.push(Math.round(100 * v.pos / v.dur) + "% watched");
+      sm.textContent = bits.join(" · ");
+      t.appendChild(name); t.appendChild(sm);
+      if (v.dur && v.pos > 5000) {
+        var mini = document.createElement("div"); mini.className = "mini";
+        var fill = document.createElement("i"); fill.style.width = Math.min(100, 100 * v.pos / v.dur) + "%";
+        mini.appendChild(fill); t.appendChild(mini);
+      }
+      var go = document.createElement("span"); go.className = "go"; go.textContent = "▶";
+      b.appendChild(th); b.appendChild(t); b.appendChild(go);
+      b.onclick = function () { askPlay(v, shelf ? shelf.id : "__all__", shelf ? shelf.name : "All videos"); };
+      box.appendChild(b);
+    });
+  }
+
+  var pending = null;
+  function askPlay(v, shelfId, shelfName) {
+    pending = { v: v, shelf: shelfId };
+    $("sheetTitle").textContent = v.title;
+    $("sheetSub").textContent = "Plays on her phone now, then auto-plays the rest of " + shelfName + ".";
+    $("sheetErr").textContent = "";
+    var img = $("sheetThumb"); img.removeAttribute("data-id"); setThumb(img, v.id);
+    $("sheet").classList.remove("hidden");
+  }
+  $("sheetCancel").onclick = function () { $("sheet").classList.add("hidden"); };
+  $("sheet").addEventListener("click", function (e) { if (e.target === $("sheet")) $("sheet").classList.add("hidden"); });
+  $("sheetPlay").onclick = function () {
+    if (!pending) return;
+    $("sheetPlay").disabled = true; $("sheetErr").textContent = "";
+    control("play", "&video=" + encodeURIComponent(pending.v.id) + "&shelf=" + encodeURIComponent(pending.shelf))
+      .then(function () { $("sheet").classList.add("hidden"); toast("▶ Playing on her phone"); setTimeout(loadLibrary, 2000); })
+      .catch(function (e) { $("sheetErr").textContent = e.message || "Couldn't reach her phone."; })
+      .then(function () { $("sheetPlay").disabled = false; });
+  };
 
   // Save her phone's battery: stop the camera when this iPhone screen is off / app hidden.
   document.addEventListener("visibilitychange", function () {

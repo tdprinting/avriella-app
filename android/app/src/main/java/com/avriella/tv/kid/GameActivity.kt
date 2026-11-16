@@ -7,6 +7,8 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import com.avriella.tv.cam.CamState
+import com.avriella.tv.cam.Remote
+import com.avriella.tv.data.Library
 import com.avriella.tv.games.GAMES
 import com.avriella.tv.games.GameView
 import com.avriella.tv.games.Sounds
@@ -29,6 +31,26 @@ class GameActivity : KidActivity() {
     private lateinit var holder: FrameLayout
     private var game: GameView? = null
     private var gameId = "paint"
+
+    /** From the iPhone: picking a video switches her from the game to that show (still locked). */
+    private val remoteHandler: (Remote.Cmd) -> String = { c ->
+        if (c.action == "play" && c.videoId != null && Library.videos.containsKey(c.videoId)) {
+            PlayerActivity.start(this, c.shelfId, c.videoId)
+            finish()
+            "ok"
+        } else if (c.action == "play") "That video isn't on her phone any more."
+        else "She's playing a game right now. Pick a video to switch to a show."
+    }
+
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        Remote.handler = remoteHandler
+    }
+
+    override fun onDestroy() {
+        if (Remote.handler === remoteHandler) Remote.handler = null
+        super.onDestroy()
+    }
 
     override fun initialTouchLock() = false
     override fun camMode() = "playing"

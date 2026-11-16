@@ -14,6 +14,7 @@ import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.VideoView
 import com.avriella.tv.cam.CamState
+import com.avriella.tv.cam.Remote
 import com.avriella.tv.data.Library
 import com.avriella.tv.data.Video
 import com.avriella.tv.ui.MATCH
@@ -56,6 +57,47 @@ class PlayerActivity : KidActivity() {
     private val saver = object : Runnable {
         override fun run() { savePosition(); ui.postDelayed(this, 5000) }
     }
+    /** Keeps the iPhone's "Now playing" card up to date. */
+    private val stateTick = object : Runnable {
+        override fun run() {
+            val v = queue.getOrNull(index)
+            CamState.videoId = v?.id
+            CamState.shelfId = shelfId
+            CamState.posMs = video.currentPosition.toLong().coerceAtLeast(0)
+            CamState.durMs = video.duration.toLong().coerceAtLeast(v?.durationMs ?: 0)
+            CamState.playing = video.isPlaying
+            ui.postDelayed(this, 1000)
+        }
+    }
+    private var skipWakeResume = false
+    private val remoteHandler: (Remote.Cmd) -> String = { handleRemote(it) }
+
+    /** Commands from the parents' iPhones. */
+    private fun handleRemote(c: Remote.Cmd): String {
+        if (queue.isEmpty()) return "Nothing is loaded yet."
+        when (c.action) {
+            "play" -> {
+                val v = c.videoId?.let { Library.videos[it] } ?: return "That video isn't on her phone any more."
+                val sid = c.shelfId?.takeIf { it == Library.ALL || Library.shelf(it) != null } ?: shelfId
+                var q = Library.videosIn(sid)
+                var newShelf = sid
+                if (q.none { it.id == v.id }) { q = Library.videosIn(Library.ALL); newShelf = Library.ALL }
+                shelfId = newShelf
+                queue = q
+                errorsInRow = 0
+                if (sleeping) { skipWakeResume = true; wake(); skipWakeResume = false }
+                play(q.indexOfFirst { it.id == v.id })
+                if (panelOpen) rebuildPanel()
+            }
+            "pause" -> { video.pause(); savePosition() }
+            "resume" -> if (sleeping) wake() else video.start()
+            "next" -> { if (sleeping) { skipWakeResume = true; wake(); skipWakeResume = false }; next() }
+            "prev" -> { if (sleeping) { skipWakeResume = true; wake(); skipWakeResume = false }; play(index - 1, fromStart = true) }
+            else -> return "Unknown command"
+        }
+        ui.removeCallbacks(stateTick); stateTick.run()
+        return "ok"
+    }
 
     override fun initialTouchLock() = true
     override fun camMode() = "watching"
@@ -97,6 +139,14 @@ class PlayerActivity : KidActivity() {
         }
         play(index)
         ui.postDelayed(saver, 5000)
+        ui.post(stateTick)
+        Remote.handler = remoteHandler
+    }
+
+    override fun onDestroy() {
+        if (Remote.handler === remoteHandler) Remote.handler = null
+        CamState.videoId = null; CamState.playing = false
+        super.onDestroy()
     }
 
     private fun play(i: Int, fromStart: Boolean = false) {
@@ -149,6 +199,7 @@ class PlayerActivity : KidActivity() {
 
     override fun onSleep() { savePosition(); video.pause() }
     override fun onWake() {
+        if (skipWakeResume) return
         if (!video.isPlaying) {
             // after "All done!" start over; otherwise just continue
             if (video.currentPosition <= 0 && queue.isNotEmpty()) play(index) else video.start()

@@ -51,10 +51,22 @@ class MainActivity : ParentActivity() {
         addAction("⚙️ Manage") { startActivity(Intent(this, ManageActivity::class.java)) }
     }
 
+    private val remoteHandler: (com.avriella.tv.cam.Remote.Cmd) -> String = { c ->
+        if (c.action == "play" && c.videoId != null && Library.videos.containsKey(c.videoId)) {
+            PlayerActivity.start(this, c.shelfId, c.videoId); "ok"
+        } else "Her phone is on the parent menu."
+    }
+
     override fun onResume() {
         // If something ever crashed while locked, don't leave the parents stuck.
         KidLock.exit(this)
         super.onResume()
+        com.avriella.tv.cam.Remote.handler = remoteHandler
+    }
+
+    override fun onPause() {
+        if (com.avriella.tv.cam.Remote.handler === remoteHandler) com.avriella.tv.cam.Remote.handler = null
+        super.onPause()
     }
 
     override fun build() {

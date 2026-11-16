@@ -51,6 +51,8 @@ To uninstall later, first tap **Kid lock → Turn off Full Lock**.
 From then on, tapping the icon connects automatically. You can turn that off with the *Connect automatically* switch.
 
 **In the viewer:**
+- **Now playing** shows what's on her phone, with a picture, a progress bar and ⏮ ⏯ ⏭ buttons.
+- **📺 Pick a video** lists every show, playlist and video saved on her phone. Tap one, then **Play on her phone**, and it starts right away and auto-plays the rest of that show. If she's in a game, it switches her to the video (still locked).
 - **🔄 Back cam / Front cam** switches cameras. Her video keeps playing.
 - **↻ Rotate**, **🪞 Mirror** and **📸 Photo** do what they say.
 - **Auto-find her phone** (on by default): if her phone gets a new Wi-Fi address, the viewer searches your home Wi-Fi and reconnects on its own.
