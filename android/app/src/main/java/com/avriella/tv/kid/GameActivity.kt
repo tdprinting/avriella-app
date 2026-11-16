@@ -33,24 +33,13 @@ class GameActivity : KidActivity() {
     private var gameId = "paint"
 
     /** From the iPhone: picking a video switches her from the game to that show (still locked). */
-    private val remoteHandler: (Remote.Cmd) -> String = { c ->
+    override fun onRemote(c: Remote.Cmd): String =
         if (c.action == "play" && c.videoId != null && Library.videos.containsKey(c.videoId)) {
             PlayerActivity.start(this, c.shelfId, c.videoId)
             finish()
             "ok"
         } else if (c.action == "play") "That video isn't on her phone any more."
         else "She's playing a game right now. Pick a video to switch to a show."
-    }
-
-    override fun onCreate(savedInstanceState: android.os.Bundle?) {
-        super.onCreate(savedInstanceState)
-        Remote.handler = remoteHandler
-    }
-
-    override fun onDestroy() {
-        if (Remote.handler === remoteHandler) Remote.handler = null
-        super.onDestroy()
-    }
 
     override fun initialTouchLock() = false
     override fun camMode() = "playing"

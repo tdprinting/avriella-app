@@ -132,6 +132,20 @@
     background: linear-gradient(135deg, var(--orange), var(--pink)); }
   .vid .mini { height: 4px; border-radius: 4px; background: rgba(255,255,255,.2); margin-top: 6px; overflow: hidden; }
   .vid .mini i { display: block; height: 100%; background: var(--yellow); }
+  .ctl-label { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; font-weight: 800; font-size: 15px; }
+  .ctl-label b { font-size: 14px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.18); }
+  .vol { display: flex; align-items: center; gap: 12px; }
+  .vol button { flex: none; width: 52px; height: 52px; padding: 0; font-size: 26px; background: var(--glass-hi); border: 1px solid var(--edge); }
+  .vol input[type=range] { -webkit-appearance: none; appearance: none; flex: 1; height: 12px; padding: 0; border-radius: 999px;
+    background: linear-gradient(90deg, var(--yellow) 0%, var(--orange) var(--fill, 0%), rgba(255,255,255,.22) var(--fill, 0%)); border: 0; }
+  .vol input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; border-radius: 50%; background: #fff;
+    box-shadow: 0 3px 10px rgba(0,0,0,.25); }
+  .vol input[type=range]::-moz-range-thumb { width: 32px; height: 32px; border-radius: 50%; background: #fff; border: 0; }
+  .seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .seg button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; min-height: 66px; font-size: 22px;
+    border-radius: 20px; background: rgba(255,255,255,.14); border: 1px solid var(--edge); }
+  .seg button small { font-size: 12px; font-weight: 800; }
+  .seg button.on, #sleepSeg button.on { background: #fff; color: #7a2a8a; }
   .sheet { position: fixed; inset: 0; z-index: 10; background: rgba(20,5,40,.45); display: flex; align-items: flex-end; justify-content: center;
     padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   .sheet-card { width: 100%; max-width: 480px; padding: 18px; text-align: center; background: rgba(90,40,140,.55); }
@@ -230,6 +244,41 @@
     <button id="mirror"><span>🪞</span>Mirror</button>
     <button id="snap"><span>📸</span>Photo</button>
   </div>
+  <div class="glass card" id="ctlCard">
+    <h2>🎛️ Her phone</h2>
+
+    <div class="ctl-label"><span>🔊 Volume</span><b id="volVal">–</b></div>
+    <div class="vol">
+      <button id="volDown" aria-label="Quieter">−</button>
+      <input type="range" id="volSlider" min="0" max="15" step="1" value="0" aria-label="Volume">
+      <button id="volUp" aria-label="Louder">+</button>
+    </div>
+
+    <div class="ctl-label"><span>💡 Screen brightness</span></div>
+    <div class="seg" id="brightSeg">
+      <button data-v="1">☀️<small>Bright</small></button>
+      <button data-v="0">🌤️<small>Auto</small></button>
+      <button data-v="2">🌥️<small>Dim</small></button>
+      <button data-v="3">🌙<small>Night</small></button>
+    </div>
+
+    <div class="ctl-label"><span>⏰ Sleep timer</span><b id="sleepVal">Off</b></div>
+    <div class="tabs" id="sleepSeg">
+      <button data-v="0">Off</button>
+      <button data-v="15">15 min</button>
+      <button data-v="30">30 min</button>
+      <button data-v="45">45 min</button>
+      <button data-v="60">1 hour</button>
+      <button data-v="90">1½ hours</button>
+      <button data-v="end">After this video</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn-soft" id="sleepNow">🌙 Sleep now</button>
+      <button class="btn-main hidden" id="wakeBtn">☀️ Wake up</button>
+    </div>
+    <p class="muted" style="margin:10px 0 0;font-size:13px">When the timer ends, her phone pauses and shows a calm “Night night” screen with the screen dimmed.</p>
+  </div>
+
   <div class="glass card" id="libCard">
     <h2>📺 Pick a video</h2>
     <p class="muted" style="margin:0 0 10px">Saved on her phone. Tap one to play it there.</p>
@@ -418,6 +467,7 @@
       $("mode").classList.toggle("on", j.mode === "watching" || j.mode === "playing");
       $("battery").textContent = (j.charging ? "⚡ " : "🔋 ") + j.battery + "%";
       updateNow(j);
+      updateControls(j);
       if (typeof j.rotation === "number" && j.rotation !== deviceRot) { deviceRot = j.rotation; layout(); }
       if (j.error) overlay(j.error, false);
       if (!streaming && !document.hidden) startStream();
@@ -572,6 +622,73 @@
   };
   $("nextBtn").onclick = function () { control("next").then(function () { toast("⏭ Next video"); }).catch(function (e) { toast(e.message); }); };
   $("prevBtn").onclick = function () { control("prev").then(function () { toast("⏮ Previous video"); }).catch(function (e) { toast(e.message); }); };
+
+  // ---------- Volume / brightness / sleep timer ----------
+  var volDragging = false, volMax = 15, lastSet = 0;
+  function paintVol(v) {
+    var s = $("volSlider");
+    s.max = volMax; s.value = v;
+    s.style.setProperty("--fill", (volMax ? 100 * v / volMax : 0) + "%");
+    $("volVal").textContent = v === 0 ? "Muted" : Math.round(100 * v / volMax) + "%";
+  }
+  // Send one volume change at a time so quick taps can't arrive out of order.
+  var volBusy = false, volNext = null;
+  function sendVolume(v) {
+    lastSet = Date.now();
+    if (volBusy) { volNext = v; return; }
+    volBusy = true;
+    control("volume", "&value=" + v).catch(function (e) { toast(e.message); }).then(function () {
+      volBusy = false; lastSet = Date.now();
+      if (volNext !== null) { var n = volNext; volNext = null; sendVolume(n); }
+    });
+  }
+  $("volSlider").addEventListener("input", function () { volDragging = true; paintVol(+this.value); });
+  $("volSlider").addEventListener("change", function () { volDragging = false; sendVolume(+this.value); });
+  $("volDown").onclick = function () { var v = Math.max(0, +$("volSlider").value - 1); paintVol(v); sendVolume(v); };
+  $("volUp").onclick = function () { var v = Math.min(volMax, +$("volSlider").value + 1); paintVol(v); sendVolume(v); };
+
+  function markOn(box, val) {
+    Array.prototype.forEach.call($(box).querySelectorAll("button"), function (b) { b.classList.toggle("on", b.getAttribute("data-v") === String(val)); });
+  }
+  Array.prototype.forEach.call($("brightSeg").querySelectorAll("button"), function (b) {
+    b.onclick = function () {
+      var v = b.getAttribute("data-v"); markOn("brightSeg", v); lastSet = Date.now();
+      control("brightness", "&value=" + v).catch(function (e) { toast(e.message); });
+    };
+  });
+  var sleepChoice = null;
+  Array.prototype.forEach.call($("sleepSeg").querySelectorAll("button"), function (b) {
+    b.onclick = function () {
+      var v = b.getAttribute("data-v"); sleepChoice = v; markOn("sleepSeg", v); lastSet = Date.now();
+      control("sleep", "&value=" + v).then(function () {
+        toast(v === "0" ? "Sleep timer off" : v === "end" ? "⏰ Stops after this video" : "⏰ Stops in " + b.textContent);
+      }).catch(function (e) { toast(e.message); });
+    };
+  });
+  $("sleepNow").onclick = function () { control("sleep", "&value=now").then(function () { toast("🌙 Night night"); }).catch(function (e) { toast(e.message); }); };
+  $("wakeBtn").onclick = function () { control("wake").then(function () { toast("☀️ Playing again"); }).catch(function (e) { toast(e.message); }); };
+
+  function updateControls(j) {
+    var recent = Date.now() - lastSet < 2500; // don't fight the parent's own tap
+    if (typeof j.volumeMax === "number" && j.volumeMax > 0) volMax = j.volumeMax;
+    if (typeof j.volume === "number" && !volDragging && !recent) paintVol(j.volume);
+    if (typeof j.brightness === "number" && !recent) markOn("brightSeg", j.brightness);
+    var left = typeof j.sleepLeftSec === "number" ? j.sleepLeftSec : -1;
+    if (j.stopAfter) $("sleepVal").textContent = "After this video";
+    else if (left >= 0) $("sleepVal").textContent = (left >= 60 ? Math.ceil(left / 60) + " min left" : left + "s left");
+    else $("sleepVal").textContent = "Off";
+    if (!recent) {
+      if (j.stopAfter) markOn("sleepSeg", "end");
+      else if (left < 0) markOn("sleepSeg", "0");
+      else if (sleepChoice && sleepChoice !== "0" && sleepChoice !== "end") markOn("sleepSeg", sleepChoice);
+      else markOn("sleepSeg", "");
+    }
+    var asleep = j.mode === "sleeping";
+    $("wakeBtn").classList.toggle("hidden", !asleep);
+    $("sleepNow").classList.toggle("hidden", asleep);
+    var kidMode = j.mode === "watching" || j.mode === "playing" || asleep;
+    $("brightSeg").style.opacity = $("sleepSeg").style.opacity = kidMode ? "" : ".5";
+  }
 
   function loadLibrary() {
     fetch("/api/library?key=" + encodeURIComponent(code) + "&t=" + Date.now(), { cache: "no-store" })

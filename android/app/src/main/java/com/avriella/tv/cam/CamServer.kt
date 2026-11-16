@@ -34,6 +34,8 @@ object CamState {
     @Volatile var posMs = 0L
     @Volatile var durMs = 0L
     @Volatile var playing = false
+    @Volatile var sleepAt = 0L
+    @Volatile var stopAfter = false
 
     /** IPv4 addresses the iPhones can use. Wi-Fi first; Tailscale (100.x) works from away. */
     fun addresses(): List<String> {
@@ -133,7 +135,7 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                 } else denied(out)
                 "/api/thumb" -> if (authed) thumb(out, query["id"] ?: "") else denied(out)
                 "/api/control" -> if (authed) {
-                    val res = Remote.send(Remote.Cmd(query["action"] ?: "", query["video"], query["shelf"]))
+                    val res = Remote.send(Remote.Cmd(query["action"] ?: "", query["video"], query["shelf"], query["value"]))
                     val body = if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)
                     send(out, 200, "application/json", body.toString().toByteArray())
                 } else denied(out)
@@ -170,6 +172,11 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("pos", CamState.posMs)
             put("dur", CamState.durMs)
             put("playing", CamState.playing)
+            put("volume", Remote.volume())
+            put("volumeMax", Remote.volumeMax())
+            put("brightness", Library.settings.brightness)
+            put("sleepLeftSec", if (CamState.sleepAt > 0) ((CamState.sleepAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0) else -1)
+            put("stopAfter", CamState.stopAfter)
             put("viewers", CamState.viewers)
             put("error", cam.error ?: "")
         }.toString()

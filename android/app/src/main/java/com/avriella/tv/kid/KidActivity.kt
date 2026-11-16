@@ -22,6 +22,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import com.avriella.tv.cam.CamService
 import com.avriella.tv.cam.CamState
+import com.avriella.tv.cam.Remote
 import com.avriella.tv.data.Library
 import com.avriella.tv.ui.MATCH
 import com.avriella.tv.ui.Pal
@@ -79,7 +80,7 @@ abstract class KidActivity : Activity() {
     private val sleepCheck = object : Runnable {
         override fun run() {
             if (sleepAt == 0L) return
-            if (System.currentTimeMillis() >= sleepAt) { sleepAt = 0; sleepMin = 0; goToSleep("Night night") }
+            if (System.currentTimeMillis() >= sleepAt) { sleepAt = 0; sleepMin = 0; CamState.sleepAt = 0; goToSleep("Night night") }
             else ui.postDelayed(this, 5000)
         }
     }
@@ -119,6 +120,7 @@ abstract class KidActivity : Activity() {
         applyBrightness()
         if (Library.settings.sleepDefaultMin > 0) setSleep(Library.settings.sleepDefaultMin)
         startCam()
+        Remote.handler = kidRemote
     }
 
     override fun onResume() {
@@ -210,9 +212,11 @@ abstract class KidActivity : Activity() {
 
     private fun setSleep(min: Int) {
         sleepMin = min
+        stopAfterCurrent = false
         ui.removeCallbacks(sleepCheck)
-        if (min <= 0) { sleepAt = 0; return }
+        if (min <= 0) { sleepAt = 0; CamState.sleepAt = 0; return }
         sleepAt = System.currentTimeMillis() + min * 60_000L
+        CamState.sleepAt = sleepAt
         ui.postDelayed(sleepCheck, 5000)
     }
 
@@ -350,6 +354,39 @@ abstract class KidActivity : Activity() {
 
     open fun onExitKidMode() {}
 
+    /** "Stop after the video that's playing now" (set from the iPhone). */
+    protected var stopAfterCurrent = false
+        set(v) { field = v; CamState.stopAfter = v }
+
+    /** Shared iPhone commands: brightness and sleep. Everything else goes to the screen itself. */
+    private val kidRemote: (Remote.Cmd) -> String = { c ->
+        when (c.action) {
+            "brightness" -> {
+                val b = c.value?.toIntOrNull()
+                if (b == null) "Unknown brightness" else {
+                    Library.settings.brightness = b.coerceIn(0, 3); Library.save()
+                    if (!sleeping) applyBrightness()
+                    if (panelOpen) rebuildPanel()
+                    "ok"
+                }
+            }
+            "sleep" -> {
+                when (c.value) {
+                    "now" -> { setSleep(0); goToSleep("Night night") }
+                    "end" -> { setSleep(0); stopAfterCurrent = true }
+                    else -> setSleep(c.value?.toIntOrNull() ?: 0)
+                }
+                if (panelOpen) rebuildPanel()
+                "ok"
+            }
+            "wake" -> { wake(); if (panelOpen) rebuildPanel(); "ok" }
+            else -> onRemote(c)
+        }
+    }
+
+    /** Screen-specific iPhone commands (play a video, pause, next...). */
+    open fun onRemote(c: Remote.Cmd): String = "Not available right now."
+
     // ---------------- baby cam ----------------
     private fun startCam() {
         if (!Library.settings.camEnabled) return
@@ -363,11 +400,14 @@ abstract class KidActivity : Activity() {
     private fun stopCam() {
         CamState.mode = "menu"
         CamState.nowPlaying = ""
+        CamState.sleepAt = 0
+        CamState.stopAfter = false
         // the cam keeps running in the menu only if the parents want "always on"; default: stop.
         stopService(Intent(this, CamService::class.java))
     }
 
     override fun onDestroy() {
+        if (Remote.handler === kidRemote) Remote.handler = null
         ui.removeCallbacksAndMessages(null)
         super.onDestroy()
     }

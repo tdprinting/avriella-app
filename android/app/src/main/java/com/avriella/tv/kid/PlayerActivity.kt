@@ -70,7 +70,7 @@ class PlayerActivity : KidActivity() {
         }
     }
     private var skipWakeResume = false
-    private val remoteHandler: (Remote.Cmd) -> String = { handleRemote(it) }
+    override fun onRemote(c: Remote.Cmd): String = handleRemote(c)
 
     /** Commands from the parents' iPhones. */
     private fun handleRemote(c: Remote.Cmd): String {
@@ -127,6 +127,7 @@ class PlayerActivity : KidActivity() {
         video.setOnCompletionListener {
             queue.getOrNull(index)?.let { it.positionMs = 0 }
             Library.save()
+            if (stopAfterCurrent) { stopAfterCurrent = false; goToSleep("Night night"); return@setOnCompletionListener }
             next(auto = true)
         }
         video.setOnErrorListener { _, _, _ ->
@@ -140,11 +141,9 @@ class PlayerActivity : KidActivity() {
         play(index)
         ui.postDelayed(saver, 5000)
         ui.post(stateTick)
-        Remote.handler = remoteHandler
     }
 
     override fun onDestroy() {
-        if (Remote.handler === remoteHandler) Remote.handler = null
         CamState.videoId = null; CamState.playing = false
         super.onDestroy()
     }
