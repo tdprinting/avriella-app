@@ -40,6 +40,11 @@ To uninstall later, first tap **Kid lock → Turn off Full Lock**.
 
 ## 3. Baby cam on your iPhones
 
+**No codes, no addresses.** Her phone announces itself on your network as `avriella.local`, and the Baby Cam app finds it by that name (plus any address it has seen before) every time you open it, on home Wi-Fi or on your iPhone's hotspot in the car. iPhones on the same Wi-Fi or hotspot connect without a code. If you'd rather require one, turn on **Manage → Baby cam → Require a code**. The connection stays up whenever Avriella TV is open on her phone, including the parent menu. Allow the camera with **"While using the app"** (not "Only this time"), or the camera turns off again after the app closes.
+
+**Scrubbing:** drag (or tap) the progress bar in Now Playing to jump to any spot in her video.
+
+
 **One-time setup on her phone:** go to **Manage → Baby cam**, turn it on, and allow the camera. Note the address (for example `http://192.168.1.23:8080`) and the 6-digit code.
 
 **Install the Baby Cam app on each iPhone:**

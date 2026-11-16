@@ -115,7 +115,8 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             val path = full.substringBefore('?')
             val query = parseQuery(full.substringAfter('?', ""))
             val out = sock.getOutputStream()
-            val authed = query["key"] == Library.settings.camCode
+            val authed = query["key"] == Library.settings.camCode ||
+                (!Library.settings.camRequireCode && isLocal(sock.inetAddress))
             if (authed) when (query["cam"]) { "back" -> cam.select(true); "front" -> cam.select(false) }
             when (path) {
                 "/", "/index.html" -> asset(out, "web/index.html", "text/html; charset=utf-8")
@@ -137,19 +138,30 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                 "/api/thumb" -> if (authed) thumb(out, query["id"] ?: "") else denied(out)
                 "/api/control" -> if (authed) {
                     val res = Remote.send(Remote.Cmd(query["action"] ?: "", query["video"], query["shelf"], query["value"]))
+                    android.util.Log.i("AvriellaRemote", "${sock.inetAddress?.hostAddress} ${query["action"]} ${query["value"] ?: query["video"] ?: ""} -> $res")
                     val body = if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)
                     send(out, 200, "application/json", body.toString().toByteArray())
                 } else denied(out)
                 "/api/stream" -> if (authed) stream(sock, out) else denied(out)
                 else -> send(out, 404, "text/plain", "Not found".toByteArray())
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.w("AvriellaCam", "request failed", e)
         } finally {
             try { sock.close() } catch (_: Exception) {}
         }
     }
 
+    /** Same Wi-Fi, iPhone hotspot, this phone, or Tailscale (already signed in to your account). */
+    private fun isLocal(a: java.net.InetAddress?): Boolean {
+        if (a == null) return false
+        if (a.isLoopbackAddress || a.isSiteLocalAddress || a.isLinkLocalAddress) return true
+        val b = a.address
+        return b.size == 4 && (b[0].toInt() and 0xFF) == 100 && (b[1].toInt() and 0xC0) == 64
+    }
+
     private fun denied(out: OutputStream) {
+        android.util.Log.i("AvriellaRemote", "refused a request: wrong or missing code")
         Thread.sleep(1200) // slows down code guessing
         send(out, 401, "application/json", "{\"error\":\"wrong code\"}".toByteArray())
     }

@@ -46,6 +46,8 @@ class Settings {
     var levelVideo = false
     var camEnabled = false
     var camCode = ""
+    /** Off: iPhones on the same Wi-Fi / hotspot connect without a code. */
+    var camRequireCode = false
     var lastVideoId: String? = null
     var lastShelfId: String? = null
 }
@@ -208,6 +210,7 @@ object Library {
                 settings.levelVideo = s.optBoolean("levelVideo", false)
                 settings.camEnabled = s.optBoolean("camEnabled", false)
                 settings.camCode = s.optString("camCode", "")
+                settings.camRequireCode = s.optBoolean("camRequireCode", false)
                 settings.lastVideoId = s.optString("lastVideo").ifEmpty { null }
                 settings.lastShelfId = s.optString("lastShelf").ifEmpty { null }
             }
@@ -243,7 +246,7 @@ object Library {
                 put("loop", settings.loop); put("resume", settings.resume)
                 put("sleepDefault", settings.sleepDefaultMin); put("relockSec", settings.relockSec)
                 put("lockHint", settings.lockHint); put("brightness", settings.brightness); put("levelVideo", settings.levelVideo)
-                put("camEnabled", settings.camEnabled); put("camCode", settings.camCode)
+                put("camEnabled", settings.camEnabled); put("camCode", settings.camCode); put("camRequireCode", settings.camRequireCode)
                 put("lastVideo", settings.lastVideoId ?: ""); put("lastShelf", settings.lastShelfId ?: "")
             })
             val tmp = File(file.path + ".tmp")

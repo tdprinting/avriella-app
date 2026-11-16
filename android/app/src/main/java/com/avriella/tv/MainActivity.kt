@@ -32,13 +32,39 @@ import com.avriella.tv.ui.pill
 import com.avriella.tv.ui.pressable
 import com.avriella.tv.ui.rounded
 import com.avriella.tv.ui.section
+import com.avriella.tv.ui.toast
 import com.avriella.tv.ui.vbox
 
 class App : Application() {
+    private var visible = 0
+    private val ui = android.os.Handler(android.os.Looper.getMainLooper())
+    private val stopCam = Runnable { if (visible == 0) stopService(Intent(this, com.avriella.tv.cam.CamService::class.java)) }
+
     override fun onCreate() {
         super.onCreate()
         Library.init(this)
         Thread { Sounds.init(this) }.start()
+        // The iPhone connection stays up whenever any Avriella TV screen is showing (menu included),
+        // and shuts down a little after the app leaves the screen.
+        registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+            override fun onActivityStarted(a: android.app.Activity) { visible++; ui.removeCallbacks(stopCam); startCam(a) }
+            override fun onActivityStopped(a: android.app.Activity) { visible--; if (visible <= 0) { visible = 0; ui.postDelayed(stopCam, 120_000) } }
+            override fun onActivityCreated(a: android.app.Activity, b: android.os.Bundle?) {}
+            override fun onActivityResumed(a: android.app.Activity) { ui.removeCallbacks(stopCam); startCam(a) }
+            override fun onActivityPaused(a: android.app.Activity) {}
+            override fun onActivitySaveInstanceState(a: android.app.Activity, b: android.os.Bundle) {}
+            override fun onActivityDestroyed(a: android.app.Activity) {}
+        })
+    }
+
+    companion object {
+        /** Starts the iPhone connection (web server + camera on demand) if the parents turned it on. */
+        fun startCam(a: android.app.Activity) {
+            if (!Library.settings.camEnabled) { android.util.Log.i("AvriellaCam", "iPhone connection is turned off in settings"); return }
+            try { a.startForegroundService(Intent(a, com.avriella.tv.cam.CamService::class.java)) } catch (e: Exception) {
+                android.util.Log.w("AvriellaCam", "couldn't start cam service", e)
+            }
+        }
     }
 }
 
@@ -49,6 +75,13 @@ class MainActivity : ParentActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         addAction("⚙️ Manage") { startActivity(Intent(this, ManageActivity::class.java)) }
+    }
+
+    private var askedCamera = false
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 41) App.startCam(this)  // switch the camera on now that it's allowed
     }
 
     private val remoteHandler: (com.avriella.tv.cam.Remote.Cmd) -> String = { c ->
@@ -63,6 +96,12 @@ class MainActivity : ParentActivity() {
         KidLock.exit(this)
         super.onResume()
         com.avriella.tv.cam.Remote.handler = remoteHandler
+        if (Library.settings.camEnabled && !askedCamera &&
+            checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            askedCamera = true
+            toast("Allow the camera (choose \"While using the app\") so you can watch from your iPhone.")
+            requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 41)
+        }
     }
 
     override fun onPause() {

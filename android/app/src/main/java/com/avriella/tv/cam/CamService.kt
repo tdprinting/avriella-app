@@ -16,6 +16,7 @@ import android.os.PowerManager
 class CamService : Service() {
     private var cam: FrontCamera? = null
     private var server: CamServer? = null
+    private var mdns: MdnsResponder? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private var wake: PowerManager.WakeLock? = null
 
@@ -27,14 +28,15 @@ class CamService : Service() {
         nm.createNotificationChannel(NotificationChannel("cam", "Baby cam", NotificationManager.IMPORTANCE_LOW))
         val n = Notification.Builder(this, "cam")
             .setContentTitle("Baby cam is on")
-            .setContentText("Parents can watch from their iPhones on home Wi-Fi")
+            .setContentText("Parents can watch and control from their iPhones")
             .setSmallIcon(android.R.drawable.ic_menu_camera)
             .setOngoing(true)
             .build()
+        notification = n
         try {
-            if (Build.VERSION.SDK_INT >= 30) startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA)
-            else startForeground(7, n)
+            goForeground()
         } catch (e: Exception) {
+            android.util.Log.w("AvriellaCam", "couldn't go foreground", e)
             stopSelf(); return
         }
         @Suppress("DEPRECATION")
@@ -44,15 +46,34 @@ class CamService : Service() {
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "avriella:cam").apply { setReferenceCounted(false); acquire(6 * 60 * 60 * 1000L) }
         val c = FrontCamera(applicationContext)
         cam = c
-        server = CamServer(applicationContext, c).also { it.start() }
+        server = CamServer(applicationContext, c).also { android.util.Log.i("AvriellaCam", "server on port " + it.start()) }
+        mdns = MdnsResponder(applicationContext).also { it.start() }
         CamState.running = true
     }
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int = START_NOT_STICKY
+    private var notification: Notification? = null
+
+    /** The remote-control server always runs; the camera part only once camera access is allowed. */
+    private fun goForeground() {
+        val n = notification ?: return
+        if (Build.VERSION.SDK_INT >= 30) {
+            var type = ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+            if (checkSelfPermission(android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+                type = type or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+            startForeground(7, n, type)
+        } else startForeground(7, n)
+    }
+
+    // Called again each time a screen opens: picks up camera access granted since.
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        try { goForeground() } catch (e: Exception) { android.util.Log.w("AvriellaCam", "foreground update failed", e) }
+        return START_NOT_STICKY
+    }
 
     override fun onDestroy() {
         CamState.running = false
         server?.stop()
+        mdns?.stop()
         cam?.shutdown()
         try { wifiLock?.release() } catch (_: Exception) {}
         try { wake?.release() } catch (_: Exception) {}

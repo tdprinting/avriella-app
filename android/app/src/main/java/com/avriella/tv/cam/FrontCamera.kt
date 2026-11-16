@@ -96,6 +96,9 @@ class FrontCamera(private val ctx: Context) {
 
     @SuppressLint("MissingPermission")
     private fun openCamera() {
+        if (ctx.checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            error = "Camera isn't allowed on her phone yet. Open Avriella TV there and tap Allow."; return
+        }
         if (device != null) return
         try {
             val mgr = ctx.getSystemService(Context.CAMERA_SERVICE) as CameraManager

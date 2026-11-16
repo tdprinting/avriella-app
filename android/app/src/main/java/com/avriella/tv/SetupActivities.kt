@@ -43,6 +43,16 @@ private fun ParentActivity.copy(text: String) {
     toast("Copied")
 }
 
+private fun ParentActivity.switchRow(title: String, sub: String, on: Boolean, change: (Boolean) -> Unit): android.view.View {
+    val row = hbox().apply { setPadding(0, dp(10), 0, dp(4)) }
+    val col = vbox()
+    col.addView(label(title, 16f, Pal.INK, true))
+    col.addView(label(sub, 13f, Pal.SUB))
+    row.addView(col, lp(0, WRAP, 1f))
+    row.addView(android.widget.Switch(this).apply { isChecked = on; setOnCheckedChangeListener { _, c -> change(c) } })
+    return row
+}
+
 private fun ParentActivity.step(n: Int, text: String) = label("$n.  $text", 15f, Pal.INK).apply { setPadding(0, dp(6), 0, dp(6)) }
 
 /** Explains and manages the two lock levels. */
@@ -138,8 +148,10 @@ class CamSetupActivity : ParentActivity() {
         val c = card(16)
         val addrs = CamState.addresses()
         val port = CamState.port
-        c.addView(step(1, "Connect the iPhone to the same Wi-Fi as this phone."))
-        c.addView(step(2, "Open Safari and go to:"))
+        c.addView(step(1, "Put the iPhone on the same Wi-Fi as this phone (or turn on its Personal Hotspot and join it from this phone)."))
+        c.addView(step(2, "Open the Baby Cam app (tdprinting.github.io/avriella-app). It finds this phone by itself, using the name:"))
+        c.addView(mono("http://avriella.local:$port"), lp(MATCH, WRAP, t = dp(4)))
+        c.addView(label("If it ever can't, type one of these addresses instead:", 13f, Pal.SUB).apply { setPadding(0, dp(10), 0, 0) })
         if (addrs.isEmpty()) c.addView(label("This phone is not on Wi-Fi right now.", 15f, Pal.RED, true))
         addrs.forEach { a ->
             val url = "http://$a:$port"
@@ -150,9 +162,11 @@ class CamSetupActivity : ParentActivity() {
             }
             c.addView(mono(url + note), lp(MATCH, WRAP, t = dp(4)))
         }
-        c.addView(step(3, "Enter this code:"))
-        c.addView(label(s.camCode.chunked(3).joinToString(" "), 34f, Pal.INK, true).apply { letterSpacing = 0.1f })
-        c.addView(step(4, "Tap Share → \"Add to Home Screen\" so it opens like an app next time."))
+        c.addView(step(3, "Tap Share → \"Add to Home Screen\" so it opens like an app next time."))
+        c.addView(switchRow("Require a code", "Off: any iPhone on your Wi-Fi or hotspot connects with no code. On: iPhones must type the code below once.", s.camRequireCode) {
+            s.camRequireCode = it; Library.save(); rebuild()
+        }, lp(t = dp(8)))
+        if (s.camRequireCode) c.addView(label(s.camCode.chunked(3).joinToString(" "), 34f, Pal.INK, true).apply { letterSpacing = 0.1f })
         c.addView(pill("Copy address", Pal.CARD, Pal.INK) { addrs.firstOrNull()?.let { copy("http://$it:$port") } }, lp(WRAP, WRAP, t = dp(6)))
         body.addView(c)
 

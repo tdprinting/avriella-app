@@ -113,6 +113,14 @@
   .thumb.big { width: 100%; border-radius: 22px; }
   .thumb.big::before { font-size: 48px; }
   .bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.22); margin: 14px 0 6px; overflow: hidden; }
+  .scrub { position: relative; padding: 14px 0; margin: 0; touch-action: none; cursor: pointer; }
+  .scrub .bar { margin: 0; }
+  .scrub .knob { position: absolute; top: 50%; left: 0; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%;
+    background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.35); transition: left .8s linear; pointer-events: none; }
+  .scrub.dragging .knob, .scrub.dragging .bar i { transition: none; }
+  .scrub.dragging .knob { transform: scale(1.25); }
+  .scrub-tip { position: absolute; bottom: 38px; transform: translateX(-50%); padding: 4px 10px; border-radius: 10px;
+    background: rgba(20,20,60,.85); color: #fff; font-weight: 800; font-size: 13px; white-space: nowrap; pointer-events: none; }
   .bar i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--yellow), var(--orange)); transition: width .8s linear; }
   .times { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); font-weight: 700; }
   .transport { display: flex; justify-content: center; gap: 18px; margin-top: 10px; }
@@ -203,9 +211,9 @@
     <div class="big-emoji">👶</div>
     <h2>Connect to her phone</h2>
     <ol class="steps">
-      <li><span>On her phone open <b>Avriella TV → Manage → Baby cam</b>.</span></li>
-      <li><span>Type the address and 6-digit code it shows.</span></li>
-      <li><span>Keep this iPhone on the same Wi-Fi.</span></li>
+      <li><span>Usually you don't need this: the app finds her phone by itself on your Wi-Fi or hotspot.</span></li>
+      <li><span>If it can't, open <b>Avriella TV → Manage → Baby cam</b> on her phone and type the address it shows.</span></li>
+      <li><span>The code is only needed if you turned on "Require a code" on her phone.</span></li>
     </ol>
     <label class="field" for="addr">Phone address</label>
     <input id="addr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.1.23:8080">
@@ -219,6 +227,7 @@
       <input id="carAddr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="172.20.10.9:8080">
     </details>
     <div class="err" id="setupErr"></div>
+    <button class="wide btn-soft" id="useAuto" style="margin-bottom:10px">✨ Find her phone automatically</button>
     <button class="wide btn-main" id="go">💖 Save &amp; watch</button>
   </div>
 </section>
@@ -249,8 +258,12 @@
       <div class="thumb" id="nowThumbWrap"><img id="nowThumb" alt=""></div>
       <div style="min-width:0;flex:1"><small>Now playing</small><b id="now"></b></div>
     </div>
-    <div class="bar"><i id="nowBar"></i></div>
-    <div class="times"><span id="nowPos">0:00</span><span id="nowDur"></span></div>
+    <div class="scrub" id="scrub" aria-label="Drag to jump in the video">
+      <div class="bar"><i id="nowBar"></i></div>
+      <span class="knob" id="knob"></span>
+      <span class="scrub-tip hidden" id="scrubTip">0:00</span>
+    </div>
+    <div class="times"><span id="nowPos">0:00</span><span class="muted" style="font-size:12px">drag to jump</span><span id="nowDur"></span></div>
     <div class="transport">
       <button id="prevBtn" aria-label="Previous">⏮</button>
       <button id="ppBtn" class="pp" aria-label="Pause">⏸</button>
@@ -358,7 +371,11 @@
     var autoTimer = null;
 
     function place() { return store.get("place") === "car" ? "car" : "home"; }
-    function placeAddr(p) { return p === "car" ? (store.get("carAddr") || "172.20.10.9:8080") : store.get("addr"); }
+    var AUTO = "avriella.local:8080"; // her phone announces this name on any network it's on
+    function placeAddr(p) {
+      if (store.get("manual") !== "1") return AUTO;
+      return p === "car" ? (store.get("carAddr") || "172.20.10.9:8080") : (store.get("addr") || AUTO);
+    }
     function target() {
       var a = placeAddr(place()), c = store.get("lcode");
       return a ? "http://" + a + "/" + (c ? "#code=" + c : "") : null;
@@ -374,6 +391,34 @@
       };
     });
     function go() { clearTimeout(autoTimer); var t = target(); if (t) location.href = t; }
+
+    // Try every way we know to reach her phone at once; open whichever answers first.
+    function candidates() {
+      var list = [];
+      function add(a) { if (a && list.indexOf(a) < 0) list.push(a); }
+      add(placeAddr(place())); add(AUTO); add(store.get("lastSeen")); add(store.get("addr")); add(store.get("carAddr")); add("172.20.10.9:8080");
+      return list;
+    }
+    function ping(a) {
+      return new Promise(function (resolve) {
+        var img = new Image(), done = false;
+        var t = setTimeout(function () { if (!done) { done = true; resolve(null); } }, 2500);
+        img.onload = function () { if (!done) { done = true; clearTimeout(t); resolve(a); } };
+        img.onerror = function () { if (!done) { done = true; clearTimeout(t); resolve(null); } };
+        img.src = "http://" + a + "/icon.png?t=" + Date.now();
+      });
+    }
+    function autoGo() {
+      clearTimeout(autoTimer);
+      var list = candidates(), left = list.length, won = false;
+      list.forEach(function (a) {
+        ping(a).then(function (ok) {
+          left--;
+          if (ok && !won) { won = true; store.set("lastSeen", ok); location.href = "http://" + ok + "/"; }
+          else if (left === 0 && !won) go(); // nothing answered a quick check: try the name anyway
+        });
+      });
+    }
     function showSetup() {
       clearTimeout(autoTimer);
       $("connecting").classList.add("hidden");
@@ -392,7 +437,7 @@
       $("connecting").querySelector(".spinner").style.display = autoOn() ? "" : "none";
       $("autoConnect").checked = autoOn();
       clearTimeout(autoTimer);
-      if (autoOn()) autoTimer = setTimeout(go, 1200);
+      if (autoOn()) autoTimer = setTimeout(autoGo, 600);
     }
     $("autoConnect").onchange = function () {
       store.set("autoConnect", this.checked ? "1" : "0");
@@ -418,10 +463,11 @@
       // Typing a hotspot address in the main box means "car".
       store.set("place", /^172\.20\.10\./.test(a) ? "car" : "home");
       if (/^172\.20\.10\./.test(a)) { store.set("carAddr", a); } else store.set("addr", a);
+      store.set("manual", "1");
       if (c) store.set("lcode", c); else store.del("lcode");
       go();
     };
-    $("openNow").onclick = go;
+    $("openNow").onclick = autoGo;
     $("change").onclick = showSetup;
     // Coming back to the app later re-opens the cam automatically.
     window.addEventListener("pageshow", function (e) { if (e.persisted && target()) showConnecting(); });
@@ -429,7 +475,8 @@
     if ("serviceWorker" in navigator && location.protocol === "https:") {
       navigator.serviceWorker.register("sw.js").catch(function () {});
     }
-    if (target()) showConnecting(); else showSetup();
+    $("useAuto").onclick = function () { store.del("manual"); store.del("place"); showConnecting(); };
+    showConnecting();
     return;
   }
 
@@ -443,7 +490,7 @@
   var infoTimer = null, retryTimer = null, streaming = false, lastFrameAt = 0;
 
   var camSide = store.get("cam") === "back" ? "back" : "front";
-  function api(p) { return "/api/" + p + "?key=" + encodeURIComponent(code) + "&cam=" + camSide + "&t=" + Date.now(); }
+  function api(p) { return "/api/" + p + "?key=" + encodeURIComponent(code || "") + "&cam=" + camSide + "&t=" + Date.now(); }
   function flipLabel() { $("flipText").textContent = camSide === "front" ? "Back cam" : "Front cam"; }
 
   function login() {
@@ -562,7 +609,9 @@
     var port = location.port || "8080";
     var found = null;
     overlay("Looking for her phone on Wi-Fi or your hotspot…", true);
-    var subs = subnets();
+    var byName = location.hostname !== "avriella.local" ? await probe("avriella.local", port) : null;
+    if (byName) { found = byName.replace(/^avriella\.local/, "avriella.local"); }
+    var subs = found ? [] : subnets();
     outer:
     for (var s = 0; s < subs.length; s++) {
       $("findStatus").textContent = "Searching " + subs[s] + ".x …";
@@ -579,7 +628,7 @@
     scanning = false;
     if (found) {
       $("findStatus").textContent = "Found her phone at " + found + " — reconnecting…";
-      location.href = "http://" + found + "/#code=" + encodeURIComponent(code);
+      location.href = "http://" + found + "/" + (code ? "#code=" + encodeURIComponent(code) : "");
     } else {
       $("findStatus").textContent = "Couldn't find her phone. Is the Avriella TV app open on it and on this Wi-Fi?";
       overlay("Her phone isn't answering. Open a show or game on it.", false);
@@ -622,7 +671,7 @@
     return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(x).padStart(2, "0");
   }
   function mins(ms) { var m = Math.round((ms || 0) / 60000); return !ms ? "" : m >= 60 ? Math.floor(m / 60) + "h " + (m % 60) + "m" : Math.max(1, m) + " min"; }
-  function thumbUrl(id) { return "/api/thumb?key=" + encodeURIComponent(code) + "&id=" + encodeURIComponent(id); }
+  function thumbUrl(id) { return "/api/thumb?key=" + encodeURIComponent(code || "") + "&id=" + encodeURIComponent(id); }
   function setThumb(img, id) {
     var url = id ? thumbUrl(id) : "";
     if (img.getAttribute("data-id") === id) return;
@@ -650,8 +699,12 @@
     if (curSound !== (j.soundId || "")) { curSound = j.soundId || ""; renderSounds(); }
     if (isVideo) {
       setThumb($("nowThumb"), j.videoId);
-      $("nowBar").style.width = (j.dur > 0 ? Math.min(100, 100 * j.pos / j.dur) : 0) + "%";
-      $("nowPos").textContent = fmt(j.pos);
+      nowDur = j.dur || 0;
+      if (!scrubbing && Date.now() - scrubSentAt > 2500) {
+        var pct = (j.dur > 0 ? Math.min(100, 100 * j.pos / j.dur) : 0) + "%";
+        $("nowBar").style.width = pct; $("knob").style.left = pct;
+        $("nowPos").textContent = fmt(j.pos);
+      }
       $("nowDur").textContent = j.dur > 0 ? fmt(j.dur) : "";
     }
     isPlaying = !!j.playing && j.mode !== "sleeping";
@@ -662,8 +715,36 @@
     }
   }
 
+  // ---- scrubbing: drag (or tap) the progress bar to jump in her video ----
+  var nowDur = 0, scrubbing = false, scrubSentAt = 0;
+  function scrubAt(e) {
+    var r = $("scrub").getBoundingClientRect();
+    var f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    var pct = (f * 100) + "%";
+    $("nowBar").style.width = pct; $("knob").style.left = pct;
+    $("scrubTip").style.left = pct; $("scrubTip").textContent = fmt(f * nowDur);
+    $("nowPos").textContent = fmt(f * nowDur);
+    return f;
+  }
+  $("scrub").addEventListener("pointerdown", function (e) {
+    if (!nowDur) return;
+    scrubbing = true; $("scrub").classList.add("dragging"); $("scrubTip").classList.remove("hidden");
+    try { $("scrub").setPointerCapture(e.pointerId); } catch (x) {}
+    scrubAt(e); e.preventDefault();
+  });
+  $("scrub").addEventListener("pointermove", function (e) { if (scrubbing) scrubAt(e); });
+  function endScrub(e) {
+    if (!scrubbing) return;
+    scrubbing = false; $("scrub").classList.remove("dragging"); $("scrubTip").classList.add("hidden");
+    var ms = Math.round(scrubAt(e) * nowDur);
+    scrubSentAt = Date.now(); lastSet = Date.now();
+    control("seek", "&value=" + ms).then(function () { toast("⏩ Jumped to " + fmt(ms)); }).catch(function (x) { toast(x.message); });
+  }
+  $("scrub").addEventListener("pointerup", endScrub);
+  $("scrub").addEventListener("pointercancel", function () { scrubbing = false; $("scrub").classList.remove("dragging"); $("scrubTip").classList.add("hidden"); });
+
   function control(action, extra) {
-    var url = "/api/control?key=" + encodeURIComponent(code) + "&action=" + action + (extra || "");
+    var url = "/api/control?key=" + encodeURIComponent(code || "") + "&action=" + action + (extra || "");
     return fetch(url, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       if (j.error) throw new Error(j.error);
       setTimeout(pollInfo, 400); setTimeout(pollInfo, 1500);
@@ -774,7 +855,7 @@
   }
 
   function loadLibrary() {
-    fetch("/api/library?key=" + encodeURIComponent(code) + "&t=" + Date.now(), { cache: "no-store" })
+    fetch("/api/library?key=" + encodeURIComponent(code || "") + "&t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { return r.json(); })
       .then(function (j) { if (j.videos) { lib = j; renderTabs(); renderList(); renderSounds(); } })
       .catch(function () {});
@@ -856,12 +937,21 @@
 
   // Save her phone's battery: stop the camera when this iPhone screen is off / app hidden.
   document.addEventListener("visibilitychange", function () {
-    if (!code || $("viewer").classList.contains("hidden")) return;
+    if ($("viewer").classList.contains("hidden")) return;
     if (document.hidden) stopStream(); else { pollInfo(); startStream(); }
+  });
+  // iOS sometimes restores the app from memory instead of reloading it: reconnect right away.
+  window.addEventListener("pageshow", function (e) {
+    if (e.persisted && !$("viewer").classList.contains("hidden")) { fails = 0; pollInfo(); startStream(); }
   });
 
   $("foot").textContent = "Connected to " + location.host + " on your Wi-Fi";
-  if (code) startViewer(); else login();
+  // Her phone lets this iPhone in without a code on your own Wi-Fi / hotspot.
+  // Only if she turned "Require a code" on do we ask for one.
+  if (code) startViewer();
+  else fetch("/api/info?t=" + Date.now(), { cache: "no-store" }).then(function (r) {
+    if (r.status === 401) login(); else startViewer();
+  }).catch(function () { startViewer(); });
 })();
 </script>
 </body>

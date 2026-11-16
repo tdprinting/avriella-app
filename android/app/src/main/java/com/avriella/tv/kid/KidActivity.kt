@@ -391,22 +391,14 @@ abstract class KidActivity : Activity() {
     open fun onRemote(c: Remote.Cmd): String = "Not available right now."
 
     // ---------------- baby cam ----------------
-    private fun startCam() {
-        if (!Library.settings.camEnabled) return
-        if (checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
-        try {
-            val i = Intent(this, CamService::class.java)
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(i) else startService(i)
-        } catch (_: Exception) {}
-    }
+    private fun startCam() = com.avriella.tv.App.startCam(this)
 
     private fun stopCam() {
         CamState.mode = "menu"
         CamState.nowPlaying = ""
         CamState.sleepAt = 0
         CamState.stopAfter = false
-        // the cam keeps running in the menu only if the parents want "always on"; default: stop.
-        stopService(Intent(this, CamService::class.java))
+        // The connection itself stays up for the parent menu; App stops it once the app is closed.
     }
 
     override fun onDestroy() {

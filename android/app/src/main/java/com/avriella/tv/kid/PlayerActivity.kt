@@ -91,6 +91,13 @@ class PlayerActivity : KidActivity() {
             }
             "level" -> { applyLevel(); if (panelOpen) rebuildPanel(); return "ok" }
             "sounds" -> { savePosition(); SleepSoundsActivity.switchFrom(this, c.value); return "ok" }
+            "seek" -> {
+                // Jump to a spot from the iPhone's progress bar (milliseconds).
+                val ms = c.value?.toLongOrNull() ?: return "Unknown position"
+                val d = video.duration.toLong()
+                video.seekTo((if (d > 0) ms.coerceIn(0, d - 1000) else ms.coerceAtLeast(0)).toInt())
+                if (sleeping) { skipWakeResume = true; wake(); skipWakeResume = false; video.start() }
+            }
             "pause" -> { video.pause(); savePosition() }
             "resume" -> if (sleeping) wake() else video.start()
             "next" -> { if (sleeping) { skipWakeResume = true; wake(); skipWakeResume = false }; next() }
