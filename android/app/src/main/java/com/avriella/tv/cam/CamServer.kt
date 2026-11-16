@@ -36,6 +36,7 @@ object CamState {
     @Volatile var playing = false
     @Volatile var sleepAt = 0L
     @Volatile var stopAfter = false
+    @Volatile var soundId: String? = null
 
     /** IPv4 addresses the iPhones can use. Wi-Fi first; Tailscale (100.x) works from away. */
     fun addresses(): List<String> {
@@ -175,8 +176,10 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("volume", Remote.volume())
             put("volumeMax", Remote.volumeMax())
             put("brightness", Library.settings.brightness)
+            put("level", Library.settings.levelVideo)
             put("sleepLeftSec", if (CamState.sleepAt > 0) ((CamState.sleepAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0) else -1)
             put("stopAfter", CamState.stopAfter)
+            put("soundId", CamState.soundId ?: "")
             put("viewers", CamState.viewers)
             put("error", cam.error ?: "")
         }.toString()
@@ -190,6 +193,9 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                 put(JSONObject().put("id", s.id).put("name", s.name).put("emoji", s.emoji)
                     .put("kind", s.kind).put("ids", org.json.JSONArray(s.videoIds)))
             }
+        })
+        o.put("sounds", org.json.JSONArray().apply {
+            com.avriella.tv.sleep.SLEEP_SOUNDS.forEach { s -> put(JSONObject().put("id", s.id).put("name", s.name).put("emoji", s.emoji)) }
         })
         o.put("videos", org.json.JSONArray().apply {
             Library.videosIn(Library.ALL).forEach { v ->

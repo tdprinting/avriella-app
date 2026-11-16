@@ -130,7 +130,12 @@ class CamSetupActivity : ParentActivity() {
         if (addrs.isEmpty()) c.addView(label("This phone is not on Wi-Fi right now.", 15f, Pal.RED, true))
         addrs.forEach { a ->
             val url = "http://$a:$port"
-            c.addView(mono(url + if (a.startsWith("100.")) "    (Tailscale / away from home)" else ""), lp(MATCH, WRAP, t = dp(4)))
+            val note = when {
+                a.startsWith("100.") -> "    (Tailscale / away from home)"
+                a.startsWith("172.20.10.") -> "    (🚗 iPhone hotspot / car)"
+                else -> ""
+            }
+            c.addView(mono(url + note), lp(MATCH, WRAP, t = dp(4)))
         }
         c.addView(step(3, "Enter this code:"))
         c.addView(label(s.camCode.chunked(3).joinToString(" "), 34f, Pal.INK, true).apply { letterSpacing = 0.1f })
@@ -157,6 +162,16 @@ class CamSetupActivity : ParentActivity() {
             }
         }, lp(MATCH, WRAP, t = dp(10)))
         body.addView(p)
+
+        body.addView(section("🚗  Car mode (no Wi-Fi)"))
+        body.addView(card(16).apply {
+            addView(label("No Wi-Fi, like in the car? The iPhone itself can be the network:", 14f, Pal.INK, true))
+            addView(step(1, "On your iPhone: Settings → Personal Hotspot → turn on \"Allow Others to Join\"."))
+            addView(step(2, "On this phone: Wi-Fi → pick your iPhone and enter the hotspot password (only once, it remembers)."))
+            addView(step(3, "Open a show here. A 172.20.10.x address appears above. Put it in the Baby Cam app under Change → 🚗 Car mode."))
+            addView(label("Tip: so the address never changes, open this phone's Wi-Fi settings → your iPhone's hotspot → Edit → IP settings: Static, IP 172.20.10.9, gateway 172.20.10.1, prefix length 28, DNS 172.20.10.1. Then tap 🚗 Car in the Baby Cam app.", 13f, Pal.SUB).apply { setPadding(0, dp(10), 0, 0) })
+            addView(label("This works with no cell signal at all. The phones talk directly; nothing goes to the internet. (Bluetooth can't be used, because iPhone web apps aren't allowed to use it.)", 13f, Pal.SUB).apply { setPadding(0, dp(8), 0, 0) })
+        }, lp(t = dp(4)))
 
         body.addView(section("Watching when you're away from home"))
         body.addView(card(16).apply {

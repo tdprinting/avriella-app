@@ -12,7 +12,6 @@ import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
-import android.widget.VideoView
 import com.avriella.tv.cam.CamState
 import com.avriella.tv.cam.Remote
 import com.avriella.tv.data.Library
@@ -26,6 +25,7 @@ import com.avriella.tv.ui.formatTime
 import com.avriella.tv.ui.hbox
 import com.avriella.tv.ui.label
 import com.avriella.tv.ui.lp
+import com.avriella.tv.ui.pill
 import com.avriella.tv.ui.rounded
 import com.avriella.tv.ui.toast
 
@@ -42,7 +42,7 @@ class PlayerActivity : KidActivity() {
         }
     }
 
-    private lateinit var video: VideoView
+    private lateinit var video: LevelVideoView
     private var shelfId: String = Library.ALL
     private var queue: List<Video> = emptyList()
     private var index = 0
@@ -89,6 +89,8 @@ class PlayerActivity : KidActivity() {
                 play(q.indexOfFirst { it.id == v.id })
                 if (panelOpen) rebuildPanel()
             }
+            "level" -> { applyLevel(); if (panelOpen) rebuildPanel(); return "ok" }
+            "sounds" -> { savePosition(); SleepSoundsActivity.switchFrom(this, c.value); return "ok" }
             "pause" -> { video.pause(); savePosition() }
             "resume" -> if (sleeping) wake() else video.start()
             "next" -> { if (sleeping) { skipWakeResume = true; wake(); skipWakeResume = false }; next() }
@@ -104,7 +106,7 @@ class PlayerActivity : KidActivity() {
 
     override fun createContent(): View {
         val f = FrameLayout(this).apply { setBackgroundColor(Color.BLACK) }
-        video = VideoView(this)
+        video = LevelVideoView(this)
         f.addView(video, FrameLayout.LayoutParams(MATCH, MATCH, Gravity.CENTER))
         return f
     }
@@ -138,6 +140,7 @@ class PlayerActivity : KidActivity() {
             } else ui.postDelayed({ next(auto = true) }, 800)
             true
         }
+        applyLevel()
         play(index)
         ui.postDelayed(saver, 5000)
         ui.post(stateTick)
@@ -146,6 +149,14 @@ class PlayerActivity : KidActivity() {
     override fun onDestroy() {
         CamState.videoId = null; CamState.playing = false
         super.onDestroy()
+    }
+
+    /** Keep-level on: freeze the screen's orientation and let the picture turn instead. */
+    private fun applyLevel() {
+        val on = Library.settings.levelVideo
+        requestedOrientation = if (on) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
+            else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        video.keepLevel = on
     }
 
     private fun play(i: Int, fromStart: Boolean = false) {
@@ -243,6 +254,10 @@ class PlayerActivity : KidActivity() {
         ctr.addView(roundBtn("+30", 15f) { video.seekTo(video.currentPosition + 30_000) })
         ctr.addView(roundBtn("⏭", 20f) { next(); ui.postDelayed({ rebuildPanel() }, 400) })
         box.addView(ctr, lp(MATCH, WRAP, t = dp(6)))
+        val lv = Library.settings.levelVideo
+        box.addView(pill(if (lv) "🧭  Keep level: ON" else "🧭  Keep level: off", if (lv) Pal.GREEN else 0x33FFFFFF, Color.WHITE) {
+            Library.settings.levelVideo = !Library.settings.levelVideo; Library.save(); applyLevel(); rebuildPanel()
+        }, lp(MATCH, WRAP, t = dp(10)))
 
         if (queue.size > 1) {
             box.addView(sectionLabel("Up next in ${Library.shelfName(shelfId)}  •  autoplay ${if (Library.settings.autoplay) "on" else "off"}"))

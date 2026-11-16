@@ -146,6 +146,14 @@
     border-radius: 20px; background: rgba(255,255,255,.14); border: 1px solid var(--edge); }
   .seg button small { font-size: 12px; font-weight: 800; }
   .seg button.on, #sleepSeg button.on { background: #fff; color: #7a2a8a; }
+  .car-help { margin: 14px 0 4px; padding: 12px 14px; border-radius: 18px; background: rgba(255,255,255,.12); border: 1px solid var(--edge); }
+  .car-help summary { font-weight: 800; cursor: pointer; }
+  .car-help p { font-size: 13px; margin: 8px 0; }
+  .sounds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .sounds button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px; min-height: 84px;
+    border-radius: 20px; font-size: 12px; line-height: 1.2; background: rgba(20,20,70,.35); border: 1px solid var(--edge); }
+  .sounds button span { font-size: 28px; line-height: 1; }
+  .sounds button.on { background: linear-gradient(160deg, rgba(56,189,248,.7), rgba(167,139,250,.6)); box-shadow: 0 0 0 2px #fff inset; }
   .sheet { position: fixed; inset: 0; z-index: 10; background: rgba(20,5,40,.45); display: flex; align-items: flex-end; justify-content: center;
     padding: 16px 16px calc(env(safe-area-inset-bottom) + 16px); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   .sheet-card { width: 100%; max-width: 480px; padding: 18px; text-align: center; background: rgba(90,40,140,.55); }
@@ -184,6 +192,10 @@
       <button class="btn-main" id="openNow">▶ Open now</button>
       <button class="btn-soft" id="change">✏️ Change</button>
     </div>
+    <div class="seg" id="placeSeg" style="margin-top:12px">
+      <button data-v="home">🏠<small>Home Wi-Fi</small></button>
+      <button data-v="car">🚗<small>Car / no Wi-Fi</small></button>
+    </div>
     <label class="switch" style="margin-top:18px"><input type="checkbox" id="autoConnect"> <span>Connect automatically when I open the app</span></label>
   </div>
 
@@ -199,6 +211,13 @@
     <input id="addr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.1.23:8080">
     <label class="field" for="lcode">6-digit code</label>
     <input id="lcode" class="code" inputmode="numeric" maxlength="7" placeholder="••••••">
+    <details class="car-help">
+      <summary>🚗 Car mode (no Wi-Fi)</summary>
+      <p class="muted">No Wi-Fi? Turn on <b>Personal Hotspot</b> on this iPhone, join it from her phone once (it remembers), and open Avriella TV. Her phone then shows a <b>172.20.10.x</b> address. Type it here.</p>
+      <p class="muted">Tip: on her phone, set a fixed IP of <b>172.20.10.9</b> for your hotspot (Wi-Fi → your hotspot → Edit → IP settings: Static, gateway 172.20.10.1) so the address never changes.</p>
+      <label class="field" for="carAddr">Her phone's address on your hotspot</label>
+      <input id="carAddr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="172.20.10.9:8080">
+    </details>
     <div class="err" id="setupErr"></div>
     <button class="wide btn-main" id="go">💖 Save &amp; watch</button>
   </div>
@@ -262,6 +281,8 @@
       <button data-v="3">🌙<small>Night</small></button>
     </div>
 
+    <label class="switch" style="margin:14px 0 4px"><input type="checkbox" id="levelSw"> <span>🧭 Keep video level when she flips the phone</span></label>
+
     <div class="ctl-label"><span>⏰ Sleep timer</span><b id="sleepVal">Off</b></div>
     <div class="tabs" id="sleepSeg">
       <button data-v="0">Off</button>
@@ -277,6 +298,12 @@
       <button class="btn-main hidden" id="wakeBtn">☀️ Wake up</button>
     </div>
     <p class="muted" style="margin:10px 0 0;font-size:13px">When the timer ends, her phone pauses and shows a calm “Night night” screen with the screen dimmed.</p>
+  </div>
+
+  <div class="glass card" id="soundCard">
+    <h2>😴 Sleep sounds</h2>
+    <p class="muted" style="margin:0 0 10px">Switches her phone to calm sounds with a dark, dimmed screen. Pick a video below to go back to shows.</p>
+    <div class="sounds" id="soundGrid"></div>
   </div>
 
   <div class="glass card" id="libCard">
@@ -330,10 +357,22 @@
     $("foot").textContent = "Connects straight to her phone. Nothing is uploaded anywhere.";
     var autoTimer = null;
 
+    function place() { return store.get("place") === "car" ? "car" : "home"; }
+    function placeAddr(p) { return p === "car" ? (store.get("carAddr") || "172.20.10.9:8080") : store.get("addr"); }
     function target() {
-      var a = store.get("addr"), c = store.get("lcode");
+      var a = placeAddr(place()), c = store.get("lcode");
       return a ? "http://" + a + "/" + (c ? "#code=" + c : "") : null;
     }
+    function markPlace() {
+      Array.prototype.forEach.call($("placeSeg").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === place()); });
+    }
+    Array.prototype.forEach.call($("placeSeg").children, function (b) {
+      b.onclick = function () {
+        store.set("place", b.getAttribute("data-v"));
+        markPlace(); clearTimeout(autoTimer);
+        $("connAddr").textContent = (place() === "car" ? "🚗 " : "🏠 ") + placeAddr(place());
+      };
+    });
     function go() { clearTimeout(autoTimer); var t = target(); if (t) location.href = t; }
     function showSetup() {
       clearTimeout(autoTimer);
@@ -341,12 +380,14 @@
       $("setup").classList.remove("hidden");
       $("addr").value = store.get("addr") || "";
       $("lcode").value = store.get("lcode") || "";
+      $("carAddr").value = store.get("carAddr") || "";
     }
     function autoOn() { return store.get("autoConnect") !== "0"; }
     function showConnecting() {
       $("setup").classList.add("hidden");
       $("connecting").classList.remove("hidden");
-      $("connAddr").textContent = store.get("addr");
+      $("connAddr").textContent = (place() === "car" ? "🚗 " : "🏠 ") + placeAddr(place());
+      markPlace();
       $("connTitle").textContent = autoOn() ? "Opening baby cam…" : "Baby cam";
       $("connecting").querySelector(".spinner").style.display = autoOn() ? "" : "none";
       $("autoConnect").checked = autoOn();
@@ -371,7 +412,12 @@
       if (!a) { $("setupErr").textContent = "Type the address shown on her phone."; $("addr").focus(); return; }
       if (c && c.length !== 6) { $("setupErr").textContent = "The code has 6 numbers."; return; }
       if (a.indexOf(":") < 0) a += ":8080";
-      store.set("addr", a);
+      var car = $("carAddr").value.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+      if (car && car.indexOf(":") < 0) car += ":8080";
+      if (car) store.set("carAddr", car); else store.del("carAddr");
+      // Typing a hotspot address in the main box means "car".
+      store.set("place", /^172\.20\.10\./.test(a) ? "car" : "home");
+      if (/^172\.20\.10\./.test(a)) { store.set("carAddr", a); } else store.set("addr", a);
       if (c) store.set("lcode", c); else store.del("lcode");
       go();
     };
@@ -380,6 +426,9 @@
     // Coming back to the app later re-opens the cam automatically.
     window.addEventListener("pageshow", function (e) { if (e.persisted && target()) showConnecting(); });
 
+    if ("serviceWorker" in navigator && location.protocol === "https:") {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    }
     if (target()) showConnecting(); else showSetup();
     return;
   }
@@ -455,7 +504,7 @@
     $("dot").classList.remove("live");
   }
 
-  var modeText = { watching: "📺 Watching a show", playing: "🎮 Playing a game", sleeping: "🌙 Sleep screen", menu: "🏠 In the parent menu" };
+  var modeText = { watching: "📺 Watching a show", playing: "🎮 Playing a game", sleeping: "🌙 Sleep screen", sounds: "😴 Sleep sounds", menu: "🏠 In the parent menu" };
   function pollInfo() {
     fetch(api("info"), { cache: "no-store" }).then(function (r) {
       if (r.status === 401) { stopStream(); store.del("code"); login(); throw new Error("auth"); }
@@ -502,6 +551,7 @@
     function add(s) { if (list.indexOf(s) < 0) list.push(s); }
     var h = location.hostname;
     if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) add(h.split(".").slice(0, 3).join("."));
+    add("172.20.10"); // iPhone Personal Hotspot (car mode) — only 13 addresses, so it's quick
     // the most common home router ranges
     ["192.168.1", "192.168.0", "10.0.0", "192.168.86", "192.168.68", "10.0.1", "192.168.2", "192.168.4", "192.168.50", "10.1.10"].forEach(add);
     return list;
@@ -511,13 +561,14 @@
     scanning = true;
     var port = location.port || "8080";
     var found = null;
-    overlay("Looking for her phone on your Wi-Fi…", true);
+    overlay("Looking for her phone on Wi-Fi or your hotspot…", true);
     var subs = subnets();
     outer:
     for (var s = 0; s < subs.length; s++) {
       $("findStatus").textContent = "Searching " + subs[s] + ".x …";
       var ips = [];
-      for (var i = 1; i < 255; i++) { var ip = subs[s] + "." + i; if (ip !== location.hostname) ips.push(ip); }
+      var last = subs[s] === "172.20.10" ? 15 : 255;
+      for (var i = 1; i < last; i++) { var ip = subs[s] + "." + i; if (ip !== location.hostname) ips.push(ip); }
       for (var k = 0; k < ips.length; k += 48) {
         var batch = ips.slice(k, k + 48).map(function (ip) { return probe(ip, port); });
         var res = await Promise.all(batch);
@@ -589,11 +640,14 @@
     var show = !!(j.nowPlaying);
     $("nowBox").classList.toggle("hidden", !show);
     $("now").textContent = j.nowPlaying || "";
-    var isVideo = !!j.videoId;
+    var isVideo = !!j.videoId, isSound = !!j.soundId;
     $("nowThumbWrap").classList.toggle("hidden", !isVideo);
     document.querySelector("#nowBox .bar").classList.toggle("hidden", !isVideo);
     document.querySelector("#nowBox .times").classList.toggle("hidden", !isVideo);
-    document.querySelector("#nowBox .transport").classList.toggle("hidden", !isVideo);
+    document.querySelector("#nowBox .transport").classList.toggle("hidden", !isVideo && !isSound);
+    $("prevBtn").classList.toggle("hidden", !isVideo);
+    $("nextBtn").classList.toggle("hidden", !isVideo);
+    if (curSound !== (j.soundId || "")) { curSound = j.soundId || ""; renderSounds(); }
     if (isVideo) {
       setThumb($("nowThumb"), j.videoId);
       $("nowBar").style.width = (j.dur > 0 ? Math.min(100, 100 * j.pos / j.dur) : 0) + "%";
@@ -668,8 +722,16 @@
   $("sleepNow").onclick = function () { control("sleep", "&value=now").then(function () { toast("🌙 Night night"); }).catch(function (e) { toast(e.message); }); };
   $("wakeBtn").onclick = function () { control("wake").then(function () { toast("☀️ Playing again"); }).catch(function (e) { toast(e.message); }); };
 
+  $("levelSw").onchange = function () {
+    var on = this.checked; lastSet = Date.now();
+    control("level", "&value=" + (on ? "on" : "off"))
+      .then(function () { toast(on ? "🧭 Video stays level" : "🧭 Video turns with the phone"); })
+      .catch(function (e) { toast(e.message); });
+  };
+
   function updateControls(j) {
     var recent = Date.now() - lastSet < 2500; // don't fight the parent's own tap
+    if (typeof j.level === "boolean" && !recent) $("levelSw").checked = j.level;
     if (typeof j.volumeMax === "number" && j.volumeMax > 0) volMax = j.volumeMax;
     if (typeof j.volume === "number" && !volDragging && !recent) paintVol(j.volume);
     if (typeof j.brightness === "number" && !recent) markOn("brightSeg", j.brightness);
@@ -690,10 +752,31 @@
     $("brightSeg").style.opacity = $("sleepSeg").style.opacity = kidMode ? "" : ".5";
   }
 
+  var curSound = "";
+  function renderSounds() {
+    var box = $("soundGrid");
+    if (!lib || !lib.sounds) { $("soundCard").classList.add("hidden"); return; }
+    $("soundCard").classList.remove("hidden");
+    box.textContent = "";
+    lib.sounds.forEach(function (s) {
+      var b = document.createElement("button");
+      b.className = s.id === curSound ? "on" : "";
+      var e = document.createElement("span"); e.textContent = s.emoji;
+      b.appendChild(e); b.appendChild(document.createTextNode(s.name));
+      b.onclick = function () {
+        curSound = s.id; renderSounds();
+        control("sounds", "&value=" + encodeURIComponent(s.id))
+          .then(function () { toast(s.emoji + " " + s.name + " on her phone"); })
+          .catch(function (e) { toast(e.message); });
+      };
+      box.appendChild(b);
+    });
+  }
+
   function loadLibrary() {
     fetch("/api/library?key=" + encodeURIComponent(code) + "&t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { return r.json(); })
-      .then(function (j) { if (j.videos) { lib = j; renderTabs(); renderList(); } })
+      .then(function (j) { if (j.videos) { lib = j; renderTabs(); renderList(); renderSounds(); } })
       .catch(function () {});
   }
 

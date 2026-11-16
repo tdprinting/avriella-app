@@ -54,7 +54,8 @@ class MainActivity : ParentActivity() {
     private val remoteHandler: (com.avriella.tv.cam.Remote.Cmd) -> String = { c ->
         if (c.action == "play" && c.videoId != null && Library.videos.containsKey(c.videoId)) {
             PlayerActivity.start(this, c.shelfId, c.videoId); "ok"
-        } else "Her phone is on the parent menu."
+        } else if (c.action == "sounds") { com.avriella.tv.kid.SleepSoundsActivity.start(this, c.value); "ok" }
+        else "Her phone is on the parent menu."
     }
 
     override fun onResume() {
@@ -103,6 +104,14 @@ class MainActivity : ParentActivity() {
         body.addView(section("🎮  Baby games"))
         body.addView(grid(GAMES.map { g ->
             tile(g.name, g.blurb, g.color, g.emoji, null, onOpen = { GameActivity.start(this, g.id) }, onPlay = { GameActivity.start(this, g.id) })
+        }))
+
+        body.addView(section("😴  Sleep sounds"))
+        body.addView(label("Calm sounds with a dark, dimmed screen for naps and bedtime.", 14f, Pal.SUB).apply { setPadding(dp(4), 0, dp(4), dp(6)) })
+        body.addView(grid(com.avriella.tv.sleep.SLEEP_SOUNDS.map { s ->
+            tile(s.name, "Tap to start", 0xFF3B3D8F.toInt(), s.emoji, null,
+                onOpen = { com.avriella.tv.kid.SleepSoundsActivity.start(this, s.id) },
+                onPlay = { com.avriella.tv.kid.SleepSoundsActivity.start(this, s.id) })
         }))
 
         body.addView(section("🛡️  Safety"))

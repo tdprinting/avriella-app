@@ -34,7 +34,8 @@ class GameActivity : KidActivity() {
 
     /** From the iPhone: picking a video switches her from the game to that show (still locked). */
     override fun onRemote(c: Remote.Cmd): String =
-        if (c.action == "play" && c.videoId != null && Library.videos.containsKey(c.videoId)) {
+        if (c.action == "sounds") { SleepSoundsActivity.switchFrom(this, c.value); "ok" }
+        else if (c.action == "play" && c.videoId != null && Library.videos.containsKey(c.videoId)) {
             PlayerActivity.start(this, c.shelfId, c.videoId)
             finish()
             "ok"

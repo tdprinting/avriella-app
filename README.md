@@ -65,6 +65,22 @@ The viewer also shows what she's watching, whether she's on a game or the sleep 
 - It only works on your home Wi-Fi. To watch from anywhere, install **Tailscale** on her phone and your iPhones. An extra `100.x.x.x` address then appears in the Baby cam screen.
 - If GitHub Pages is enabled on this repo (Settings → Pages → `main` / `docs`), the hosted page asks for the phone's address and forwards you to it.
 
+## 4. Sleep sounds
+
+On the parent home screen, the **😴 Sleep sounds** tiles start calm sounds with slow, dark pictures and a very dim screen. Choices: ocean, rain, thunderstorm, waterfall, stream, forest, crickets, wind, heartbeat, shushing, lullaby, fan, white noise and brown noise. They're made live on the phone, so they need no internet and never repeat in an obvious loop. You can also pick one from the iPhone (**😴 Sleep sounds** card) to switch her straight from a show to bedtime. When the sleep timer ends, the sound fades out slowly instead of cutting off.
+
+## 5. Keep video level
+
+**Manage → Settings → Keep video level** (also in the parent panel and on the iPhone under **🎛️ Her phone**). When it's on, the screen stops flipping and the picture turns with the motion sensor instead, so the show stays upright however she holds or flips the phone.
+
+## 6. Car mode (no Wi-Fi)
+
+1. On your iPhone turn on **Personal Hotspot**.
+2. On her phone join that hotspot once (it remembers it).
+3. Her phone shows a `172.20.10.x` address in **Manage → Baby cam**. In the iPhone app tap **✏️ Change → 🚗 Car mode** and enter it, then pick **🚗 Car** on the connect screen.
+
+Tip: give her phone a fixed IP of `172.20.10.9` on your hotspot (her Wi-Fi settings → your hotspot → IP settings: Static, gateway `172.20.10.1`, prefix 28) so it never changes. The phones talk directly, so this works with no cell signal. The iPhone app also opens offline once it has been opened online one time. Bluetooth isn't possible, because iPhone web apps can't use it.
+
 ## Building
 
 ```

@@ -205,8 +205,11 @@ abstract class KidActivity : Activity() {
     }
 
     // ---------------- brightness / sleep ----------------
-    private fun applyBrightness(override: Float? = null) {
-        val v = override ?: when (Library.settings.brightness) { 1 -> 1f; 2 -> 0.35f; 3 -> 0.08f; else -> -1f }
+    /** A screen can ask for its own brightness (sleep sounds = very dim) until a parent changes it. */
+    protected var brightnessOverride: Float? = null
+
+    protected fun applyBrightness(override: Float? = null) {
+        val v = override ?: brightnessOverride ?: when (Library.settings.brightness) { 1 -> 1f; 2 -> 0.35f; 3 -> 0.08f; else -> -1f }
         window.attributes = window.attributes.apply { screenBrightness = v }
     }
 
@@ -308,7 +311,7 @@ abstract class KidActivity : Activity() {
 
         b.addView(sectionLabel("Screen brightness"))
         b.addView(chips(listOf("Auto", "Bright", "Dim", "Night"), Library.settings.brightness, dark = true) {
-            Library.settings.brightness = it; Library.save(); if (!sleeping) applyBrightness()
+            Library.settings.brightness = it; Library.save(); brightnessOverride = null; if (!sleeping) applyBrightness()
         })
 
         val sleepOpts = listOf(0, 15, 30, 45, 60, 90)
@@ -364,7 +367,7 @@ abstract class KidActivity : Activity() {
             "brightness" -> {
                 val b = c.value?.toIntOrNull()
                 if (b == null) "Unknown brightness" else {
-                    Library.settings.brightness = b.coerceIn(0, 3); Library.save()
+                    Library.settings.brightness = b.coerceIn(0, 3); Library.save(); brightnessOverride = null
                     if (!sleeping) applyBrightness()
                     if (panelOpen) rebuildPanel()
                     "ok"

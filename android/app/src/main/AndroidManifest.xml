@@ -52,6 +52,13 @@
             android:screenOrientation="sensorLandscape"
             android:theme="@style/KidTheme" />
 
+        <activity
+            android:name=".kid.SleepSoundsActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
+            android:resizeableActivity="false"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@style/KidTheme" />
+
         <service
             android:name=".cam.CamService"
             android:exported="false"

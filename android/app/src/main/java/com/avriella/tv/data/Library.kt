@@ -42,6 +42,8 @@ class Settings {
     var relockSec = 30
     var lockHint = true
     var brightness = 0
+    /** Turn the video picture so it stays level while she flips the phone. */
+    var levelVideo = false
     var camEnabled = false
     var camCode = ""
     var lastVideoId: String? = null
@@ -203,6 +205,7 @@ object Library {
                 settings.relockSec = s.optInt("relockSec", 30)
                 settings.lockHint = s.optBoolean("lockHint", true)
                 settings.brightness = s.optInt("brightness", 0)
+                settings.levelVideo = s.optBoolean("levelVideo", false)
                 settings.camEnabled = s.optBoolean("camEnabled", false)
                 settings.camCode = s.optString("camCode", "")
                 settings.lastVideoId = s.optString("lastVideo").ifEmpty { null }
@@ -239,7 +242,7 @@ object Library {
                 put("childName", settings.childName); put("autoplay", settings.autoplay)
                 put("loop", settings.loop); put("resume", settings.resume)
                 put("sleepDefault", settings.sleepDefaultMin); put("relockSec", settings.relockSec)
-                put("lockHint", settings.lockHint); put("brightness", settings.brightness)
+                put("lockHint", settings.lockHint); put("brightness", settings.brightness); put("levelVideo", settings.levelVideo)
                 put("camEnabled", settings.camEnabled); put("camCode", settings.camCode)
                 put("lastVideo", settings.lastVideoId ?: ""); put("lastShelf", settings.lastShelfId ?: "")
             })

@@ -48,6 +48,15 @@ object Remote {
                 "ok"
             } ?: "Her phone didn't answer."
         }
+        if (cmd.action == "level") {
+            // Saved as a setting; the player (if showing) applies it right away.
+            return onMain {
+                Library.settings.levelVideo = cmd.value == "on" || cmd.value == "true" || cmd.value == "1"
+                Library.save()
+                handler?.invoke(cmd)
+                "ok"
+            } ?: "Her phone didn't answer."
+        }
         return onMain { handler?.invoke(cmd) ?: "Her phone isn't playing a show or game right now." } ?: "Her phone didn't answer."
     }
 }

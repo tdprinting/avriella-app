@@ -87,6 +87,7 @@ class ManageActivity : ParentActivity() {
         set.addView(clickRow("Parent panel locks again after", "${s.relockSec} seconds") {
             pickOne("Auto-lock the parent panel after…", relock.map { "$it seconds" }) { s.relockSec = relock[it]; Library.save(); rebuild() }
         })
+        set.addView(switchRow("Keep video level", "Turns the picture as she flips the phone, so the show stays upright", s.levelVideo) { s.levelVideo = it; Library.save() })
         set.addView(switchRow("Show unlock hint", "Small \"hold both volume buttons\" note when she taps a locked screen", s.lockHint) { s.lockHint = it; Library.save() })
         body.addView(set)
 
