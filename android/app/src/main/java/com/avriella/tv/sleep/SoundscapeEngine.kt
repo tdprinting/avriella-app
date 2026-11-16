@@ -1,6 +1,8 @@
 package com.avriella.tv.sleep
 
+import android.content.Context
 import android.media.AudioAttributes
+import com.avriella.tv.R
 import android.media.AudioFormat
 import android.media.AudioTrack
 import kotlin.math.PI
@@ -9,10 +11,19 @@ import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.random.Random
 
-class SleepSound(val id: String, val name: String, val emoji: String, val theme: Int)
+/** [raw] is a recorded melody in res/raw; 0 means the sound is generated live. */
+class SleepSound(val id: String, val name: String, val emoji: String, val theme: Int, val raw: Int = 0) {
+    val isMelody get() = raw != 0
+}
 
-/** Soothing sounds, generated live on the phone: seamless, never repeating, fully offline. */
+/** Recorded lullabies first, then soothing sounds generated live on the phone. All offline. */
 val SLEEP_SOUNDS = listOf(
+    SleepSound("m_rainy_night", "Rainy Night Lullaby", "🌧️", SleepScene.RAIN, R.raw.melody_rainy_night),
+    SleepSound("m_soft_rain", "Soft Rain Lullaby", "☔", SleepScene.RAIN, R.raw.melody_soft_rain),
+    SleepSound("m_by_the_water", "Lullaby by the Water", "🏞️", SleepScene.WATER, R.raw.melody_by_the_water),
+    SleepSound("m_dreamy", "Dreamy Lullaby", "☁️", SleepScene.NIGHT, R.raw.melody_dreamy),
+    SleepSound("m_twinkle", "Twinkle Dreams", "✨", SleepScene.NIGHT, R.raw.melody_twinkle),
+    SleepSound("m_moonlight", "Moonlight Melody", "🌙", SleepScene.NIGHT, R.raw.melody_moonlight),
     SleepSound("ocean", "Ocean waves", "🌊", SleepScene.OCEAN),
     SleepSound("rain", "Gentle rain", "🌧️", SleepScene.RAIN),
     SleepSound("storm", "Distant thunder", "⛈️", SleepScene.RAIN),
@@ -31,7 +42,9 @@ val SLEEP_SOUNDS = listOf(
 
 fun sleepSound(id: String?) = SLEEP_SOUNDS.firstOrNull { it.id == id } ?: SLEEP_SOUNDS[0]
 
-class SoundscapeEngine {
+class SoundscapeEngine(ctx: Context) {
+    private val melody = MelodyPlayer(ctx.applicationContext)
+    @Volatile private var stopWhenSilent = false
     private val sr = 22050
     @Volatile private var soundId = "ocean"
     @Volatile private var target = 0f
@@ -39,12 +52,27 @@ class SoundscapeEngine {
     @Volatile private var running = false
     private var thread: Thread? = null
     private var track: AudioTrack? = null
-    val current get() = soundId
-    val isPlaying get() = running && target > 0f
+    /** What's selected (melody or live sound). [soundId] is only what the live generator makes. */
+    @Volatile private var currentId = "ocean"
+    private val melodyOn get() = sleepSound(currentId).isMelody
+    val current get() = currentId
+    val isPlaying get() = if (melodyOn) melody.isPlaying else running && target > 0f
 
     fun start(id: String) {
-        select(id)
-        if (running) { target = 1f; return }
+        val s = sleepSound(id)
+        currentId = s.id
+        if (s.isMelody) {
+            // Recorded melody: let the live sound fade away and loop the file instead.
+            if (running) synthFade(0f, 0.6f, stopAfter = true)
+            melody.play(s.raw)
+            return
+        }
+        melody.stop()
+        // A live sound that's still fading out from the last switch: let it finish, then start fresh.
+        if (running && stopWhenSilent) thread?.join(1500)
+        if (running) { stopWhenSilent = false; select(id); target = 1f; return }
+        soundId = id; pendingId = null; resetState()
+        stopWhenSilent = false
         running = true
         target = 1f
         thread = Thread({ loop() }, "sleep-sounds").apply { priority = Thread.MAX_PRIORITY; start() }
@@ -52,15 +80,26 @@ class SoundscapeEngine {
 
     /** Switches sound with a quick cross-fade. */
     fun select(id: String) {
-        if (id == soundId && running) return
+        if (sleepSound(id).isMelody || !running) { start(id); return }
+        currentId = id
+        if (id == soundId) return
         pendingId = id
     }
 
-    fun pause() { fade(0f, 1.5f) }
-    fun resume() { fade(1f, 1.5f) }
-    fun fade(to: Float, seconds: Float) { fadePerSample = 1f / (sr * seconds.coerceAtLeast(0.05f)); target = to }
+    fun pause() = fade(0f, 1.5f)
+    fun resume() = fade(1f, 1.5f)
+    /** Fades whatever is selected; a live sound that is winding down keeps winding down. */
+    fun fade(to: Float, seconds: Float) {
+        if (melodyOn) melody.fade(to, seconds) else synthFade(to, seconds, stopAfter = false)
+    }
+
+    private fun synthFade(to: Float, seconds: Float, stopAfter: Boolean) {
+        stopWhenSilent = stopAfter
+        fadePerSample = 1f / (sr * seconds.coerceAtLeast(0.05f)); target = to
+    }
 
     fun stop() {
+        melody.stop()
         running = false
         thread?.join(500)
         thread = null
@@ -97,7 +136,10 @@ class SoundscapeEngine {
                 buf[i * 2 + 1] = (clip(outR * g) * 32000).toInt().toShort()
             }
             t.write(buf, 0, buf.size)
+            if (stopWhenSilent && gain <= 0f) break
         }
+        running = false
+        stopWhenSilent = false
         try { t.stop() } catch (_: Exception) {}
         t.release()
         track = null

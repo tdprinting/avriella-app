@@ -67,6 +67,8 @@ The viewer also shows what she's watching, whether she's on a game or the sleep 
 
 ## 4. Sleep sounds
 
+The sleep sounds list starts with six recorded lullabies that loop forever with no gap: Rainy Night Lullaby, Soft Rain Lullaby, Lullaby by the Water, Dreamy Lullaby, Twinkle Dreams and Moonlight Melody. They live in `android/app/src/main/res/raw` as loop-ready OGG files.
+
 On the parent home screen, the **😴 Sleep sounds** tiles start calm sounds with slow, dark pictures and a very dim screen. Choices: ocean, rain, thunderstorm, waterfall, stream, forest, crickets, wind, heartbeat, shushing, lullaby, fan, white noise and brown noise. They're made live on the phone, so they need no internet and never repeat in an obvious loop. You can also pick one from the iPhone (**😴 Sleep sounds** card) to switch her straight from a show to bedtime. When the sleep timer ends, the sound fades out slowly instead of cutting off.
 
 ## 5. Keep video level

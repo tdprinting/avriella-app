@@ -30,7 +30,7 @@ class SleepSoundsActivity : KidActivity() {
         fun switchFrom(a: KidActivity, soundId: String?) { start(a, soundId); a.finish() }
     }
 
-    private val engine = SoundscapeEngine()
+    private val engine by lazy { SoundscapeEngine(this) }
     private lateinit var scene: SleepScene
     private var soundId = "ocean"
 
