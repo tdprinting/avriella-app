@@ -22,14 +22,17 @@ object KidLock {
     private fun dpm(ctx: Context) = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
     private fun admin(ctx: Context) = ComponentName(ctx, AdminReceiver::class.java)
 
-    fun isFullLock(ctx: Context): Boolean = try { dpm(ctx).isDeviceOwnerApp(ctx.packageName) } catch (_: Exception) { false }
+    fun isOwner(ctx: Context): Boolean = try { dpm(ctx).isDeviceOwnerApp(ctx.packageName) } catch (_: Exception) { false }
+
+    /** Full lock: we're the device owner, or another device manager (like Test DPC) allowed us into lock task mode. */
+    fun isFullLock(ctx: Context): Boolean = isOwner(ctx) || try { dpm(ctx).isLockTaskPermitted(ctx.packageName) } catch (_: Exception) { false }
 
     fun isLocked(ctx: Context): Boolean =
         (ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
 
     fun enter(a: Activity) {
         if (isLocked(a)) return
-        if (isFullLock(a)) {
+        if (isOwner(a)) {
             try {
                 val d = dpm(a); val c = admin(a)
                 d.setLockTaskPackages(c, arrayOf(a.packageName))

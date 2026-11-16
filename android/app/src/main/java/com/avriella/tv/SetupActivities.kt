@@ -61,6 +61,11 @@ class LockSetupActivity : ParentActivity() {
 
         body.addView(pill("🧪  Try it now (opens Sparkle Sky)", Pal.BLUE) { GameActivity.start(this, "sparkle") }, lp(MATCH, WRAP, t = dp(12)))
 
+        if (full && !KidLock.isOwner(this)) {
+            body.addView(section("Turning it off"))
+            body.addView(label("Full Lock is being allowed by your device manager app (for example Test DPC). To turn it off, open that app → Lock task → Manage lock task list and untick Avriella TV.", 14f, Pal.SUB))
+            return
+        }
         if (full) {
             body.addView(section("Turning it off"))
             body.addView(label("You need to turn Full Lock off before you can uninstall the app.", 14f, Pal.SUB))
@@ -83,6 +88,14 @@ class LockSetupActivity : ParentActivity() {
         c.addView(pill("Copy command", Pal.CARD, Pal.INK) { copy(KidLock.ADB_COMMAND) }, lp(WRAP, WRAP, t = dp(8)))
         c.addView(step(5, "You should see \"Success: Device owner set\". Re-add your Google account, then come back here – it will say Full lock is ON."))
         body.addView(c)
+
+        body.addView(section("Already using Test DPC (or another device manager)?"))
+        body.addView(card(16).apply {
+            addView(label("If the lock screen says \"This device belongs to your organization\", another app is already the device owner and the command above won't work. Let that app allow Avriella TV instead:", 14f, Pal.SUB))
+            addView(step(1, "Open Test DPC → Lock task → Manage lock task list, and tick Avriella TV."))
+            addView(step(2, "In Test DPC → Lock task → Set lock task features, turn every feature off (no Home, no Recents, no notifications, no status bar, no power menu)."))
+            addView(step(3, "Come back here. It will say Full lock is ON."))
+        }, lp(t = dp(4)))
 
         body.addView(section("Until then: make Basic lock stronger"))
         val b = card(16)
