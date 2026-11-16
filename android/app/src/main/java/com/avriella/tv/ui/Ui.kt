@@ -30,7 +30,8 @@ import com.avriella.tv.data.Video
 
 object Pal {
     const val BG = 0xFFFFF6EA.toInt()
-    const val CARD = 0xFFFFFFFF.toInt()
+    const val CARD = 0xC8FFFFFF.toInt()   // frosted glass
+    const val EDGE = 0xFFFFFFFF.toInt()
     const val INK = 0xFF2B2845.toInt()
     const val SUB = 0xFF77738C.toInt()
     const val LINE = 0xFFEDE4D6.toInt()
@@ -91,7 +92,7 @@ fun Context.outlinePill(text: CharSequence, fg: Int = Pal.INK, sp: Float = 15f, 
     label(text, sp, fg, true).apply {
         gravity = Gravity.CENTER
         val r = dpf(26f)
-        background = pressable(rounded(Pal.CARD, r, dp(2), Pal.LINE), r)
+        background = pressable(rounded(Pal.CARD, r, dp(1.5f), Pal.EDGE), r)
         setPadding(dp(16), dp(10), dp(16), dp(10))
         minHeight = dp(46)
         isClickable = true
@@ -104,8 +105,7 @@ fun Context.hbox(): LinearLayout = LinearLayout(this).apply {
 }
 
 fun Context.card(pad: Int = 16, color: Int = Pal.CARD): LinearLayout = vbox().apply {
-    background = rounded(color, dpf(22f))
-    elevation = dpf(1.5f)
+    background = rounded(color, dpf(24f), dp(1.5f), Pal.EDGE)
     setPadding(dp(pad), dp(pad), dp(pad), dp(pad))
 }
 
@@ -125,7 +125,7 @@ fun Context.chips(
         val r = dpf(20f)
         val on = if (dark) Pal.ORANGE else Pal.BLUE
         val off = if (dark) 0x33FFFFFF else Pal.CARD
-        tv.background = pressable(rounded(if (sel) on else off, r, if (sel || dark) 0 else dp(2), Pal.LINE), r)
+        tv.background = pressable(rounded(if (sel) on else off, r, if (sel || dark) 0 else dp(1.5f), Pal.EDGE), r)
         tv.setTextColor(if (sel || dark) Color.WHITE else Pal.INK)
     }
     options.forEachIndexed { i, o ->

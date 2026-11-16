@@ -18,7 +18,15 @@ abstract class ParentActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val root = vbox().apply { setBackgroundColor(Pal.BG) }
+        val root = vbox().apply {
+            // soft rainbow wash behind the frosted cards
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(0xFFFFE1EF.toInt(), 0xFFFFF1D6.toInt(), 0xFFE4E6FF.toInt(), 0xFFD9F2FF.toInt()),
+            )
+        }
+        window.statusBarColor = 0xFFFFE1EF.toInt()
+        window.navigationBarColor = 0xFFD9F2FF.toInt()
         val bar = hbox().apply { setPadding(dp(8), dp(12), dp(12), dp(6)) }
         if (hasBack) {
             bar.addView(label("←", 26f, Pal.INK, true).apply {

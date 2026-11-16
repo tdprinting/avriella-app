@@ -121,18 +121,23 @@ class MainActivity : ParentActivity() {
     private fun continueCard(): View? {
         val v = Library.settings.lastVideoId?.let { Library.videos[it] } ?: return null
         val shelfId = Library.settings.lastShelfId ?: Library.ALL
-        val c = card(14, 0xFF2B2845.toInt())
+        val c = card(14)
+        c.background = android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+            intArrayOf(0xFF8B5CF6.toInt(), 0xFFF2557A.toInt(), 0xFFFF9A3C.toInt()),
+        ).apply { cornerRadius = dpf(26f) }
+        c.elevation = dpf(6f)
         val row = hbox()
         val a = art(Pal.ORANGE, "▶", v, 0.6f, 14f, 28f)
         row.addView(a, lp(dp(150), WRAP, r = dp(14)))
         val col = vbox()
-        col.addView(label("KEEP WATCHING", 12f, 0xFFFFB98A.toInt(), true))
+        col.addView(label("✨ KEEP WATCHING", 12f, 0xFFFFF3C4.toInt(), true))
         col.addView(label(v.title, 17f, Color.WHITE, true, 2))
-        col.addView(label("from ${Library.shelfName(shelfId)}", 13f, 0xFFB9B8D6.toInt(), lines = 1))
-        col.addView(ProgressLine(this, v.progress, Pal.ORANGE, 0x33FFFFFF), lp(MATCH, dp(6), t = dp(8)))
+        col.addView(label("from ${Library.shelfName(shelfId)}", 13f, 0xE6FFFFFF.toInt(), lines = 1))
+        col.addView(ProgressLine(this, v.progress, 0xFFFFE14D.toInt(), 0x44FFFFFF), lp(MATCH, dp(6), t = dp(8)))
         row.addView(col, lp(0, WRAP, 1f))
         c.addView(row)
-        c.addView(pill("▶  Play for ${Library.settings.childName}", Pal.ORANGE) { PlayerActivity.start(this, shelfId, v.id) }, lp(MATCH, WRAP, t = dp(12)))
+        c.addView(pill("▶  Play for ${Library.settings.childName}", 0x40FFFFFF, android.graphics.Color.WHITE, 18f) { PlayerActivity.start(this, shelfId, v.id) }, lp(MATCH, WRAP, t = dp(12)))
         return c
     }
 
@@ -148,8 +153,7 @@ class MainActivity : ParentActivity() {
     private fun tile(title: String, sub: String, color: Int, emoji: String, thumb: com.avriella.tv.data.Video?, onOpen: () -> Unit, onPlay: (() -> Unit)?): View {
         val c = vbox()
         val r = dpf(20f)
-        c.background = pressable(rounded(Pal.CARD, r), r)
-        c.elevation = dpf(1.5f)
+        c.background = pressable(rounded(Pal.CARD, r, dp(1.5f), Pal.EDGE), r)
         c.setPadding(dp(8), dp(8), dp(8), dp(12))
         c.setOnClickListener { onOpen() }
         val a = art(color, emoji, thumb, 0.62f, 16f, 44f)

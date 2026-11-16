@@ -13,93 +13,183 @@
 <title>Baby Cam</title>
 <style>
   :root {
-    --bg: #14132a; --card: #22213f; --ink: #ffffff; --sub: #b9b8d6;
-    --orange: #ff8b3d; --green: #2fc46b; --blue: #4d8dff; --red: #ff5a5f; --line: rgba(255,255,255,.12);
+    --ink: #ffffff; --sub: rgba(255,255,255,.8);
+    --glass: rgba(255,255,255,.16); --glass-hi: rgba(255,255,255,.26); --edge: rgba(255,255,255,.38);
+    --pink: #ff5fa2; --orange: #ff9a3c; --yellow: #ffd23f; --green: #34d399; --sky: #38bdf8; --violet: #a78bfa;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Rounded", "Segoe UI", Roboto, sans-serif; }
-  body { padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); display: flex; flex-direction: column; }
-  header { display: flex; align-items: center; gap: 10px; padding: 14px 2px 10px; }
-  header h1 { font-size: 22px; margin: 0; flex: 1; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--sub); box-shadow: 0 0 0 4px rgba(255,255,255,.06); }
-  .dot.live { background: var(--green); animation: pulse 2s infinite; }
-  @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(47,196,107,.15); } }
+  html { background: #3b1d8f; }
+  html, body { margin: 0; min-height: 100%; color: var(--ink);
+    font: 17px/1.4 ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding: calc(env(safe-area-inset-top) + 6px) 16px calc(env(safe-area-inset-bottom) + 10px);
+    display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; position: relative; overflow-x: hidden;
+    background: linear-gradient(160deg, #3b1d8f 0%, #8a1f6e 55%, #d9541e 100%); background-attachment: fixed; }
+  /* floating colour blobs behind the glass */
+  .blobs { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+  .blobs i { position: absolute; border-radius: 50%; filter: blur(50px); opacity: .7; animation: float 18s ease-in-out infinite alternate; }
+  .blobs i:nth-child(1) { width: 60vw; height: 60vw; background: var(--sky); top: -12vw; left: -15vw; }
+  .blobs i:nth-child(2) { width: 55vw; height: 55vw; background: var(--yellow); top: 35%; right: -20vw; animation-delay: -6s; opacity: .5; }
+  .blobs i:nth-child(3) { width: 65vw; height: 65vw; background: var(--pink); bottom: -20vw; left: -10vw; animation-delay: -12s; }
+  .blobs i:nth-child(4) { width: 40vw; height: 40vw; background: var(--green); top: 12%; right: 10vw; animation-delay: -3s; opacity: .4; }
+  @keyframes float { to { transform: translate(8vw, 6vh) scale(1.15); } }
+  @media (prefers-reduced-motion: reduce) { .blobs i { animation: none; } }
+
+  .glass { background: var(--glass); border: 1px solid var(--edge); border-radius: 28px;
+    -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%);
+    box-shadow: 0 10px 40px rgba(40,10,80,.25), inset 0 1px 0 rgba(255,255,255,.35); }
+  .card { padding: 20px; margin-bottom: 14px; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 6px 0 14px; border-radius: 999px; }
+  header .logo { font-size: 26px; }
+  header h1 { font-size: 21px; margin: 0; flex: 1; letter-spacing: .2px; }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(255,255,255,.5); flex: none; }
+  .dot.live { background: var(--green); box-shadow: 0 0 0 0 rgba(52,211,153,.7); animation: pulse 1.8s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(52,211,153,0); } 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); } }
   .hidden { display: none !important; }
-  .card { background: var(--card); border-radius: 22px; padding: 18px; border: 1px solid var(--line); }
-  label { display: block; color: var(--sub); font-size: 14px; font-weight: 600; margin: 14px 0 6px; }
-  input { width: 100%; font-size: 22px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line);
-    background: #2c2b4d; color: var(--ink); outline: none; }
-  input:focus { border-color: var(--blue); }
-  input.code { letter-spacing: .3em; text-align: center; font-weight: 700; }
-  button { font: inherit; font-weight: 700; border: 0; border-radius: 999px; padding: 14px 18px; color: #fff;
-    background: var(--blue); min-height: 50px; cursor: pointer; }
-  button.wide { width: 100%; margin-top: 18px; font-size: 18px; }
-  button.ghost { background: rgba(255,255,255,.1); }
-  .muted { color: var(--sub); font-size: 14px; }
-  .err { color: #ffb0b3; font-weight: 600; min-height: 1.4em; margin-top: 10px; }
-  #stage { position: relative; width: 100%; border-radius: 22px; overflow: hidden; background: #000;
-    aspect-ratio: 3 / 4; max-height: 68vh; border: 1px solid var(--line); }
-  #stage img { position: absolute; left: 50%; top: 50%; object-fit: contain; transform-origin: center; }
-  #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    flex-direction: column; gap: 8px; color: var(--sub); text-align: center; padding: 20px; }
-  .spinner { width: 34px; height: 34px; border: 4px solid rgba(255,255,255,.15); border-top-color: var(--orange);
-    border-radius: 50%; animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
-  .chip { background: rgba(255,255,255,.08); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 600; }
-  .chip.on { background: rgba(255,139,61,.2); color: #ffc79f; }
+  h2 { font-size: 24px; margin: 0 0 6px; }
+  .big-emoji { font-size: 46px; line-height: 1; margin-bottom: 8px; }
+  label.field { display: block; color: var(--sub); font-size: 14px; font-weight: 700; margin: 16px 0 6px; letter-spacing: .3px; }
+  input { width: 100%; font: inherit; font-size: 22px; padding: 15px 18px; border-radius: 18px; outline: none;
+    border: 1px solid var(--edge); background: rgba(255,255,255,.14); color: var(--ink); }
+  input::placeholder { color: rgba(255,255,255,.45); }
+  input:focus { border-color: #fff; background: rgba(255,255,255,.22); }
+  input.code { letter-spacing: .35em; text-align: center; font-weight: 800; font-size: 28px; }
+  button { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 15px 20px; color: #fff;
+    min-height: 54px; cursor: pointer; transition: transform .12s; }
+  button:active { transform: scale(.96); }
+  .btn-main { background: linear-gradient(135deg, var(--orange), var(--pink)); box-shadow: 0 8px 24px rgba(255,95,162,.45); }
+  .btn-soft { background: var(--glass-hi); border: 1px solid var(--edge); }
+  button.wide { width: 100%; margin-top: 18px; font-size: 19px; }
+  .muted { color: var(--sub); font-size: 15px; }
+  .err { color: #fff3a8; font-weight: 700; min-height: 1.4em; margin-top: 10px; }
   .row { display: flex; gap: 10px; }
   .row button { flex: 1; }
-  .now { font-size: 15px; margin: 4px 2px 0; color: var(--sub); }
-  .now b { color: var(--ink); }
-  footer { margin-top: auto; padding: 18px 2px 12px; text-align: center; }
+
+  #stage { position: relative; width: 100%; border-radius: 28px; overflow: hidden; background: rgba(0,0,0,.55);
+    aspect-ratio: 3 / 4; max-height: 62vh; border: 2px solid rgba(255,255,255,.55); box-shadow: 0 14px 40px rgba(30,0,60,.4); }
+  #stage img { position: absolute; left: 50%; top: 50%; object-fit: contain; transform-origin: center; }
+  #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px; color: #fff; text-align: center; padding: 24px; font-weight: 700; }
+  .live-tag { position: absolute; top: 12px; left: 12px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 800;
+    background: rgba(0,0,0,.35); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); display: flex; gap: 6px; align-items: center; }
+  .spinner { width: 40px; height: 40px; border-radius: 50%; border: 5px solid rgba(255,255,255,.25); border-top-color: var(--yellow);
+    border-right-color: var(--pink); animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin: 14px 0; }
+  .pill { padding: 12px 16px; border-radius: 22px; font-weight: 800; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .pill.on { background: rgba(52,211,153,.32); border-color: rgba(167,243,208,.7); }
+  .now { margin: 0 0 14px; padding: 14px 18px; font-size: 16px; }
+  .now small { display: block; color: var(--sub); font-weight: 700; font-size: 12px; letter-spacing: .8px; text-transform: uppercase; }
+  .now b { font-size: 18px; }
+
+  .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .controls button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border-radius: 24px; padding: 12px 4px; min-height: 86px; font-size: 13px; border: 1px solid var(--edge);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+  .controls button span { font-size: 28px; line-height: 1; }
+  #flip   { background: linear-gradient(160deg, rgba(56,189,248,.55), rgba(56,189,248,.25)); }
+  #rotate { background: linear-gradient(160deg, rgba(167,139,250,.6), rgba(167,139,250,.25)); }
+  #mirror { background: linear-gradient(160deg, rgba(52,211,153,.55), rgba(52,211,153,.22)); }
+  #snap   { background: linear-gradient(160deg, rgba(255,154,60,.65), rgba(255,95,162,.35)); }
+
+  label.switch { display: flex; align-items: center; gap: 14px; margin: 0; color: var(--ink);
+    font-weight: 700; font-size: 16px; text-align: left; cursor: pointer; }
+  label.switch input { appearance: none; -webkit-appearance: none; flex: none; width: 56px; height: 34px; padding: 0;
+    border-radius: 999px; background: rgba(255,255,255,.25); position: relative; transition: background .2s; border: 1px solid var(--edge); }
+  label.switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px;
+    border-radius: 50%; background: #fff; transition: transform .2s; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+  label.switch input:checked { background: var(--green); }
+  label.switch input:checked::after { transform: translateX(22px); }
+  .steps { margin: 10px 0 0; padding: 0; list-style: none; counter-reset: s; }
+  .steps li { counter-increment: s; display: flex; gap: 12px; align-items: flex-start; margin: 10px 0; font-size: 15px; }
+  .steps li::before { content: counter(s); flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    font-weight: 800; font-size: 14px; background: linear-gradient(135deg, var(--yellow), var(--orange)); color: #5a2200; }
+  footer { margin-top: auto; padding: 16px 4px 6px; text-align: center; font-size: 13px; }
 </style>
 </head>
 <body>
-<header>
-  <span class="dot" id="dot"></span>
+<div class="blobs"><i></i><i></i><i></i><i></i></div>
+
+<header class="glass">
+  <span class="logo">🧸</span>
   <h1 id="title">Baby Cam</h1>
-  <button class="ghost hidden" id="logout" style="min-height:40px;padding:8px 14px;font-size:14px">Code</button>
+  <span class="dot" id="dot"></span>
+  <button class="btn-soft hidden" id="logout" style="min-height:38px;padding:6px 14px;font-size:14px">Code</button>
 </header>
 
-<!-- Shown on GitHub Pages: where is the phone? -->
-<section id="launcher" class="card hidden">
-  <div style="font-size:20px;font-weight:700">Connect to her phone</div>
-  <p class="muted">Open <b>Avriella TV → Manage → Baby cam</b> on her phone. It shows an address like <b>http://192.168.1.23:8080</b> and a 6-digit code. Your iPhone must be on the same Wi-Fi.</p>
-  <label for="addr">Phone address</label>
-  <input id="addr" inputmode="url" autocapitalize="off" autocorrect="off" placeholder="192.168.1.23:8080">
-  <button class="wide" id="go">Open baby cam</button>
-  <p class="muted" style="margin-top:14px">Tip: once it opens, tap Share → <b>Add to Home Screen</b> on that page. Then it opens straight to the camera.</p>
+<!-- Shown from GitHub: the home-screen app that finds her phone -->
+<section id="launcher" class="hidden">
+  <div class="glass card hidden" id="installTip">
+    <div class="big-emoji">📲</div>
+    <h2>Add me to your home screen</h2>
+    <ol class="steps">
+      <li><span>Tap the <b>Share</b> button <b>⬆︎</b> at the bottom of Safari.</span></li>
+      <li><span>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</span></li>
+      <li><span>Open <b>Baby Cam</b> from your home screen and set it up there.</span></li>
+    </ol>
+  </div>
+
+  <div class="glass card hidden" id="connecting" style="text-align:center">
+    <div class="spinner" style="margin:4px auto 14px"></div>
+    <h2 id="connTitle">Opening baby cam…</h2>
+    <p class="muted" id="connAddr" style="margin:0"></p>
+    <div class="row" style="margin-top:18px">
+      <button class="btn-main" id="openNow">▶ Open now</button>
+      <button class="btn-soft" id="change">✏️ Change</button>
+    </div>
+    <label class="switch" style="margin-top:18px"><input type="checkbox" id="autoConnect"> <span>Connect automatically when I open the app</span></label>
+  </div>
+
+  <div class="glass card hidden" id="setup">
+    <div class="big-emoji">👶</div>
+    <h2>Connect to her phone</h2>
+    <ol class="steps">
+      <li><span>On her phone open <b>Avriella TV → Manage → Baby cam</b>.</span></li>
+      <li><span>Type the address and 6-digit code it shows.</span></li>
+      <li><span>Keep this iPhone on the same Wi-Fi.</span></li>
+    </ol>
+    <label class="field" for="addr">Phone address</label>
+    <input id="addr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.1.23:8080">
+    <label class="field" for="lcode">6-digit code</label>
+    <input id="lcode" class="code" inputmode="numeric" maxlength="7" placeholder="••••••">
+    <div class="err" id="setupErr"></div>
+    <button class="wide btn-main" id="go">💖 Save &amp; watch</button>
+  </div>
 </section>
 
-<!-- Code entry (served from the phone) -->
-<section id="login" class="card hidden">
-  <div style="font-size:20px;font-weight:700">Enter the code</div>
-  <p class="muted">Find it on her phone in <b>Manage → Baby cam</b>.</p>
-  <input id="code" class="code" inputmode="numeric" maxlength="7" placeholder="000000" autocomplete="one-time-code">
+<!-- Code entry (served from her phone) -->
+<section id="login" class="glass card hidden" style="text-align:center">
+  <div class="big-emoji">🔐</div>
+  <h2>Enter the code</h2>
+  <p class="muted">It's on her phone in <b>Manage → Baby cam</b>.</p>
+  <input id="code" class="code" inputmode="numeric" maxlength="7" placeholder="••••••" autocomplete="one-time-code">
   <div class="err" id="loginErr"></div>
-  <button class="wide" id="loginBtn">Watch</button>
+  <button class="wide btn-main" id="loginBtn">👀 Watch</button>
 </section>
 
 <!-- Viewer -->
 <section id="viewer" class="hidden">
   <div id="stage">
     <img id="cam" alt="Live camera">
+    <div class="live-tag hidden" id="liveTag"><span class="dot live"></span> LIVE</div>
     <div id="overlay"><div class="spinner"></div><div id="overlayText">Connecting…</div></div>
   </div>
-  <p class="now" id="now"></p>
-  <div class="chips">
-    <span class="chip" id="mode">…</span>
-    <span class="chip" id="battery">🔋 –</span>
+  <div class="status">
+    <div class="glass pill" id="mode">…</div>
+    <div class="glass pill" id="battery">🔋 –</div>
   </div>
-  <div class="row">
-    <button class="ghost" id="flip">🔄 Back cam</button>
-    <button class="ghost" id="rotate">↻ Rotate</button>
-    <button class="ghost" id="mirror">⇋ Mirror</button>
-    <button class="ghost" id="snap">📸 Photo</button>
+  <div class="glass now hidden" id="nowBox"><small>Now playing</small><b id="now"></b></div>
+  <div class="controls">
+    <button id="flip"><span>🔄</span><em id="flipText" style="font-style:normal">Back cam</em></button>
+    <button id="rotate"><span>↻</span>Rotate</button>
+    <button id="mirror"><span>🪞</span>Mirror</button>
+    <button id="snap"><span>📸</span>Photo</button>
   </div>
-  <p class="muted" style="margin-top:14px">The camera only runs while you're watching and while a show or game is on. If the screen says “waiting”, she's probably back in the menu.</p>
+  <div class="glass card">
+    <label class="switch"><input type="checkbox" id="autoFind"> <span>Auto-find her phone if its Wi-Fi address changes</span></label>
+    <p class="muted" id="findStatus" style="margin:8px 0 0"></p>
+  </div>
+  <p class="muted" style="text-align:center;margin:4px 8px 0">The camera only runs while you watch and while a show or game is on. Her video keeps playing.</p>
 </section>
 
 <footer class="muted" id="foot"></footer>
@@ -122,15 +212,63 @@
   var onPhone = location.protocol === "http:" && location.pathname.indexOf("/api/") !== 0 && !/github\.io$/.test(location.hostname);
   if (!onPhone) {
     show("launcher");
-    $("addr").value = store.get("addr") || "";
-    $("foot").textContent = "This page only connects to her phone on your home Wi-Fi. Nothing is uploaded anywhere.";
+    var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
+    var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    $("installTip").classList.toggle("hidden", standalone || !isIOS);
+    $("foot").textContent = "Connects straight to her phone. Nothing is uploaded anywhere.";
+    var autoTimer = null;
+
+    function target() {
+      var a = store.get("addr"), c = store.get("lcode");
+      return a ? "http://" + a + "/" + (c ? "#code=" + c : "") : null;
+    }
+    function go() { clearTimeout(autoTimer); var t = target(); if (t) location.href = t; }
+    function showSetup() {
+      clearTimeout(autoTimer);
+      $("connecting").classList.add("hidden");
+      $("setup").classList.remove("hidden");
+      $("addr").value = store.get("addr") || "";
+      $("lcode").value = store.get("lcode") || "";
+    }
+    function autoOn() { return store.get("autoConnect") !== "0"; }
+    function showConnecting() {
+      $("setup").classList.add("hidden");
+      $("connecting").classList.remove("hidden");
+      $("connAddr").textContent = store.get("addr");
+      $("connTitle").textContent = autoOn() ? "Opening baby cam…" : "Baby cam";
+      $("connecting").querySelector(".spinner").style.display = autoOn() ? "" : "none";
+      $("autoConnect").checked = autoOn();
+      clearTimeout(autoTimer);
+      if (autoOn()) autoTimer = setTimeout(go, 1200);
+    }
+    $("autoConnect").onchange = function () {
+      store.set("autoConnect", this.checked ? "1" : "0");
+      if (!this.checked) clearTimeout(autoTimer);
+    };
+    // Her phone can hand over a new address after it changes: ?addr=1.2.3.4:8080&code=123456
+    var qs = new URLSearchParams(location.search);
+    if (qs.get("addr")) {
+      store.set("addr", qs.get("addr"));
+      if (/^\d{6}$/.test(qs.get("code") || "")) store.set("lcode", qs.get("code"));
+      history.replaceState(null, "", location.pathname);
+    }
+
     $("go").onclick = function () {
       var a = $("addr").value.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
-      if (!a) { $("addr").focus(); return; }
+      var c = $("lcode").value.replace(/\D/g, "");
+      if (!a) { $("setupErr").textContent = "Type the address shown on her phone."; $("addr").focus(); return; }
+      if (c && c.length !== 6) { $("setupErr").textContent = "The code has 6 numbers."; return; }
       if (a.indexOf(":") < 0) a += ":8080";
       store.set("addr", a);
-      location.href = "http://" + a + "/";
+      if (c) store.set("lcode", c); else store.del("lcode");
+      go();
     };
+    $("openNow").onclick = go;
+    $("change").onclick = showSetup;
+    // Coming back to the app later re-opens the cam automatically.
+    window.addEventListener("pageshow", function (e) { if (e.persisted && target()) showConnecting(); });
+
+    if (target()) showConnecting(); else showSetup();
     return;
   }
 
@@ -145,7 +283,7 @@
 
   var camSide = store.get("cam") === "back" ? "back" : "front";
   function api(p) { return "/api/" + p + "?key=" + encodeURIComponent(code) + "&cam=" + camSide + "&t=" + Date.now(); }
-  function flipLabel() { $("flip").textContent = camSide === "front" ? "🔄 Back cam" : "🔄 Front cam"; }
+  function flipLabel() { $("flipText").textContent = camSide === "front" ? "Back cam" : "Front cam"; }
 
   function login() {
     show("login");
@@ -189,9 +327,9 @@
     clearTimeout(retryTimer);
     streaming = true;
     var img = $("cam");
-    img.onload = function () { lastFrameAt = Date.now(); overlay(""); $("dot").classList.add("live"); };
+    img.onload = function () { lastFrameAt = Date.now(); overlay(""); $("dot").classList.add("live"); $("liveTag").classList.remove("hidden"); };
     img.onerror = function () {
-      $("dot").classList.remove("live");
+      $("dot").classList.remove("live"); $("liveTag").classList.add("hidden");
       overlay("Waiting for her phone…", true);
       if (streaming) retryTimer = setTimeout(startStream, 3000);
     };
@@ -211,19 +349,79 @@
       if (r.status === 401) { stopStream(); store.del("code"); login(); throw new Error("auth"); }
       return r.json();
     }).then(function (j) {
-      $("title").textContent = (j.name || "Baby") + " cam";
+      $("title").textContent = (j.name || "Baby") + "’s cam";
       document.title = (j.name || "Baby") + " cam";
       $("mode").textContent = modeText[j.mode] || j.mode;
       $("mode").classList.toggle("on", j.mode === "watching" || j.mode === "playing");
       $("battery").textContent = (j.charging ? "⚡ " : "🔋 ") + j.battery + "%";
-      $("now").innerHTML = j.nowPlaying ? "Now: <b></b>" : "";
-      if (j.nowPlaying) $("now").querySelector("b").textContent = j.nowPlaying;
+      $("now").textContent = j.nowPlaying || "";
+      $("nowBox").classList.toggle("hidden", !j.nowPlaying);
       if (typeof j.rotation === "number" && j.rotation !== deviceRot) { deviceRot = j.rotation; layout(); }
       if (j.error) overlay(j.error, false);
       if (!streaming && !document.hidden) startStream();
+      fails = 0;
     }).catch(function (e) {
-      if (e.message !== "auth") { $("mode").textContent = "Can't reach her phone"; $("mode").classList.remove("on"); }
+      if (e.message === "auth") return;
+      $("mode").textContent = "Can't reach her phone"; $("mode").classList.remove("on");
+      fails++;
+      if (fails >= 2 && autoFind && !scanning && !document.hidden) findPhone();
     });
+  }
+
+  // ---------- Auto-find: search the home Wi-Fi for her phone ----------
+  var fails = 0, scanning = false;
+  var autoFind = store.get("autoFind") !== "0";
+  $("autoFind").checked = autoFind;
+  $("autoFind").onchange = function () { autoFind = this.checked; store.set("autoFind", autoFind ? "1" : "0"); };
+
+  function probe(ip, port) {
+    return new Promise(function (resolve) {
+      var ctl = window.AbortController ? new AbortController() : null;
+      var t = setTimeout(function () { if (ctl) ctl.abort(); resolve(null); }, 1500);
+      fetch("http://" + ip + ":" + port + "/api/hello", { cache: "no-store", signal: ctl ? ctl.signal : undefined })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { clearTimeout(t); resolve(j && j.app === "avriella-tv" ? ip + ":" + (j.port || port) : null); })
+        .catch(function () { clearTimeout(t); resolve(null); });
+    });
+  }
+
+  function subnets() {
+    var list = [];
+    function add(s) { if (list.indexOf(s) < 0) list.push(s); }
+    var h = location.hostname;
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) add(h.split(".").slice(0, 3).join("."));
+    // the most common home router ranges
+    ["192.168.1", "192.168.0", "10.0.0", "192.168.86", "192.168.68", "10.0.1", "192.168.2", "192.168.4", "192.168.50", "10.1.10"].forEach(add);
+    return list;
+  }
+
+  async function findPhone() {
+    scanning = true;
+    var port = location.port || "8080";
+    var found = null;
+    overlay("Looking for her phone on your Wi-Fi…", true);
+    var subs = subnets();
+    outer:
+    for (var s = 0; s < subs.length; s++) {
+      $("findStatus").textContent = "Searching " + subs[s] + ".x …";
+      var ips = [];
+      for (var i = 1; i < 255; i++) { var ip = subs[s] + "." + i; if (ip !== location.hostname) ips.push(ip); }
+      for (var k = 0; k < ips.length; k += 48) {
+        var batch = ips.slice(k, k + 48).map(function (ip) { return probe(ip, port); });
+        var res = await Promise.all(batch);
+        for (var r = 0; r < res.length; r++) if (res[r]) { found = res[r]; break outer; }
+        if (!autoFind) break outer;
+      }
+    }
+    scanning = false;
+    if (found) {
+      $("findStatus").textContent = "Found her phone at " + found + " — reconnecting…";
+      location.href = "http://" + found + "/#code=" + encodeURIComponent(code);
+    } else {
+      $("findStatus").textContent = "Couldn't find her phone. Is the Avriella TV app open on it and on this Wi-Fi?";
+      overlay("Her phone isn't answering. Open a show or game on it.", false);
+      fails = 0;
+    }
   }
 
   function startViewer() {

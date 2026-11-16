@@ -40,10 +40,22 @@ To uninstall later, first tap **Kid lock → Turn off Full Lock**.
 
 ## 3. Baby cam on your iPhones
 
-1. On her phone: **Manage → Baby cam**, turn it on, and allow the camera.
-2. On the iPhone (same Wi-Fi), open Safari and go to the address shown, e.g. `http://192.168.1.23:8080`.
-3. Enter the 6-digit code. Tap **Share → Add to Home Screen** so it opens like an app.
-4. Use **🔄 Back cam / Front cam** to switch cameras, **↻ Rotate** if the picture is sideways, and **📸 Photo** for a snapshot.
+**One-time setup on her phone:** go to **Manage → Baby cam**, turn it on, and allow the camera. Note the address (for example `http://192.168.1.23:8080`) and the 6-digit code.
+
+**Install the Baby Cam app on each iPhone:**
+1. In Safari, open **https://tdprinting.github.io/avriella-app/**
+2. Tap **Share ⬆︎ → Add to Home Screen → Add**. A Baby Cam icon appears on the home screen.
+3. Open it **from the home screen**, enter the address and code, and tap **Save & watch**.
+   (Set it up from the home-screen icon, not in Safari. The home-screen app keeps its own settings.)
+
+From then on, tapping the icon connects automatically. You can turn that off with the *Connect automatically* switch.
+
+**In the viewer:**
+- **🔄 Back cam / Front cam** switches cameras. Her video keeps playing.
+- **↻ Rotate**, **🪞 Mirror** and **📸 Photo** do what they say.
+- **Auto-find her phone** (on by default): if her phone gets a new Wi-Fi address, the viewer searches your home Wi-Fi and reconnects on its own.
+
+> Auto-find runs inside the viewer, because Safari doesn't let a GitHub page search your home network. If her phone's address changes while the iPhone app is closed, the first tap may fail. Tap **✏️ Change** and type the new address, or (best) give her phone a fixed address so it never changes: in your router app, "reserve" its IP address. Tailscale also gives a fixed address.
 
 The viewer also shows what she's watching, whether she's on a game or the sleep screen, and her phone's battery level.
 

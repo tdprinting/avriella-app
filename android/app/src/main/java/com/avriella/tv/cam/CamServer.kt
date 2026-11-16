@@ -112,7 +112,14 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             when (path) {
                 "/", "/index.html" -> asset(out, "web/index.html", "text/html; charset=utf-8")
                 "/manifest.json" -> asset(out, "web/manifest.json", "application/manifest+json")
-                "/icon.png", "/apple-touch-icon.png" -> send(out, 200, "image/png", icon())
+                "/icon.png", "/apple-touch-icon.png", "/icon-192.png", "/icon-512.png" -> {
+                    val name = if (path.startsWith("/icon-")) path.drop(1) else "icon.png"
+                    val png = try { ctx.assets.open("web/$name").use { it.readBytes() } } catch (_: Exception) { icon() }
+                    send(out, 200, "image/png", png)
+                }
+                // Lets iPhones on the same Wi-Fi recognise this phone when they search for it (no secrets here).
+                "/api/hello" -> send(out, 200, "application/json",
+                    JSONObject().put("app", "avriella-tv").put("name", Library.settings.childName).put("port", CamState.port).toString().toByteArray())
                 "/api/info" -> if (authed) send(out, 200, "application/json", info().toByteArray()) else denied(out)
                 "/api/snap" -> if (authed) snap(out) else denied(out)
                 "/api/stream" -> if (authed) stream(sock, out) else denied(out)
