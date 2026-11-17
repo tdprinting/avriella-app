@@ -216,6 +216,12 @@
   .call-btn { min-height: 96px; border-radius: 24px; padding: 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
     background: rgba(111,227,181,.13); border: 1px solid rgba(111,227,181,.35); color: var(--mint); font-size: 13px; }
   .call-btn .i { width: 28px; height: 28px; }
+  .cancel-btn { display: none; color: #ff8a9a; }
+  #talkCard.recording #callBtn { display: none; }
+  #talkCard.recording .cancel-btn { display: flex; animation: popin .28s var(--ease) both; }
+  .talk-btn.leaving { background: linear-gradient(135deg, #5b5f78, #3d4058); color: #fff; }
+  .talk-btn.leaving .disc::before, .talk-btn.leaving .disc::after { animation: none; opacity: 0; }
+  @keyframes popin { from { opacity: 0; transform: scale(.85); } }
   .voice-head { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 10px; font-size: 13px; color: var(--sub); font-weight: 600; }
   .voice-head button { min-height: 32px; padding: 4px 10px 4px 8px; font-size: 13px; color: var(--moon); display: inline-flex; gap: 6px; align-items: center; }
   .voice-head button .i { width: 17px; height: 17px; }
@@ -630,6 +636,7 @@
       <div class="talk-row">
         <button class="talk-btn" id="talkBtn"><span class="disc"><svg class="i"><use href="#i-mic"/></svg></span><span><b id="talkLabel">Hold to talk</b><small id="talkSub">or tap to start, tap to send</small></span></button>
         <button class="call-btn" id="callBtn"><svg class="i"><use href="#i-live"/></svg>Video call</button>
+        <button class="call-btn cancel-btn" id="talkCancel" aria-label="Cancel voice message"><svg class="i"><use href="#i-close"/></svg>Cancel</button>
       </div>
       <div class="voice-head"><span>Voice · <b id="fxName" style="color:var(--ink)">Normal</b></span><button id="hearBtn" disabled><svg class="i"><use href="#i-ear"/></svg>Hear last</button></div>
       <div class="fx-row" id="fxGrid"></div>
@@ -1594,7 +1601,7 @@
   FX.forEach(function (f) {
     var b = document.createElement("button");
     b.setAttribute("data-fx", f.id); b.innerHTML = ic("v-" + f.id) + f.n;
-    b.onclick = function () { fx = f.id; store.set("fx", fx); paintFx(); if (lastVoice) previewWith(fx); };
+    b.onclick = function () { fx = f.id; store.set("fx", fx); paintFx(); };
     $("fxGrid").appendChild(b);
   });
   paintFx();
@@ -1670,15 +1677,24 @@
     for (var i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, d[i])) * 32767, true);
     return new Blob([v.buffer], { type: "audio/wav" });
   }
+  var canceled = false, leaving = false, sendAbort = null;
   function talkUI(state, sub) {
     var b = $("talkBtn");
     b.classList.toggle("rec", state === "rec"); b.classList.toggle("busy", state === "busy");
-    $("talkLabel").textContent = state === "rec" ? "Recording… let go to send" : state === "busy" ? "Sending…" : "Hold to talk";
-    if (state === "rec" && tapMode) $("talkLabel").textContent = "Recording… tap to send";
-    $("talkSub").textContent = sub || (state === "idle" ? "or tap to start, tap to send" : "");
+    b.classList.toggle("leaving", state === "rec" && leaving);
+    $("talkCard").classList.toggle("recording", state !== "idle");
+    $("talkLabel").textContent = state === "rec" ? (leaving ? "Let go to cancel" : tapMode ? "Recording… tap to send" : "Recording… let go to send") : state === "busy" ? "Sending…" : "Hold to talk";
+    $("talkSub").textContent = state === "rec" && !tapMode && !leaving ? (sub ? sub + " · slide off to cancel" : "slide off to cancel") : sub || (state === "idle" ? "or tap to start, tap to send" : "");
+  }
+  /** Throws away the voice message being recorded (or stops it before it reaches her phone). */
+  function cancelTalk() {
+    if (rec) { canceled = true; stopRec(); return; }
+    if (sending && sendAbort) { canceled = true; sendAbort.abort(); }
   }
   function startRec() {
     if (rec || sending) return;
+    canceled = false; leaving = false;
+    stopPreview();
     ac();
     navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then(function (st) {
       recStream = st; recChunks = [];
@@ -1692,11 +1708,13 @@
       clearInterval(recTimer);
       recTimer = setInterval(function () {
         var s = Math.floor((Date.now() - recStart) / 1000);
-        talkUI("rec", "0:" + ("0" + s).slice(-2) + " of 0:30");
+        lastSub = "0:" + ("0" + s).slice(-2) + " of 0:30";
+        talkUI("rec", lastSub);
         if (s >= 30) stopRec();
       }, 250);
     }).catch(function () { toast("Allow the microphone to talk to her."); tapMode = false; });
   }
+  var lastSub = "";
   function stopRec() {
     clearInterval(recTimer);
     if (rec && rec.state !== "inactive") rec.stop();
@@ -1704,23 +1722,37 @@
   function finishRec() {
     var r = rec; rec = null; tapMode = false;
     if (recStream) { recStream.getTracks().forEach(function (t) { t.stop(); }); recStream = null; }
+    leaving = false;
+    if (canceled) { canceled = false; recChunks = []; talkUI("idle"); toast("Voice message canceled"); return; }
     if (Date.now() - recStart < 500) { talkUI("idle"); toast("Hold the button while you talk."); return; }
     var blob = new Blob(recChunks, { type: r && r.mimeType || "audio/mp4" });
     sending = true; talkUI("busy");
+    var ctl = window.AbortController ? new AbortController() : null; sendAbort = ctl;
+    function stillOn() { if (canceled) throw new Error("canceled"); }
     blob.arrayBuffer().then(function (ab) { return ac().decodeAudioData(ab); }).then(function (buf) {
+      stillOn();
       lastVoice = buf; $("hearBtn").disabled = false;
       return render(buf, fx);
     }).then(function (out) {
-      return fetch("/api/talk?key=" + encodeURIComponent(code || ""), { method: "POST", body: wav(out), headers: { "Content-Type": "audio/wav" } });
+      stillOn();
+      return fetch("/api/talk?key=" + encodeURIComponent(code || ""), { method: "POST", body: wav(out), headers: { "Content-Type": "audio/wav" }, signal: ctl ? ctl.signal : undefined });
     }).then(function (r) { return r.json(); }).then(function (j) {
       if (j.error) throw new Error(j.error);
       toast("Playing on her phone");
-    }).catch(function (e) { toast(e.message || "Couldn't send your voice."); })
-      .then(function () { sending = false; talkUI("idle"); });
+    }).catch(function (e) { toast(canceled ? "Voice message canceled" : e.message || "Couldn't send your voice."); })
+      .then(function () { sending = false; canceled = false; sendAbort = null; talkUI("idle"); });
   }
+  var previewSrc = null;
+  function stopPreview() { if (previewSrc) { try { previewSrc.stop(); } catch (_) {} previewSrc = null; } }
   function previewWith(f) {
     if (!lastVoice) return;
-    render(lastVoice, f).then(function (b) { var s = ac().createBufferSource(); s.buffer = b; s.connect(ac().destination); s.start(); });
+    stopPreview();
+    render(lastVoice, f).then(function (b) {
+      if (rec) return; // started recording meanwhile: stay quiet
+      var s = ac().createBufferSource(); s.buffer = b; s.connect(ac().destination);
+      s.onended = function () { if (previewSrc === s) previewSrc = null; };
+      previewSrc = s; s.start();
+    });
   }
   $("hearBtn").onclick = function () { previewWith(fx); };
   var downAt = 0;
@@ -1730,14 +1762,25 @@
     if (rec && tapMode) { stopRec(); return; }  // second tap sends
     downAt = Date.now(); startRec();
   });
-  function talkUp() {
+  function outside(e) {
+    var r = $("talkBtn").getBoundingClientRect(), m = 24;
+    return e.clientX < r.left - m || e.clientX > r.right + m || e.clientY < r.top - m || e.clientY > r.bottom + m;
+  }
+  $("talkBtn").addEventListener("pointermove", function (e) {
     if (!rec || tapMode) return;
+    var l = outside(e);
+    if (l !== leaving) { leaving = l; talkUI("rec", lastSub); if (l && navigator.vibrate) navigator.vibrate(15); }
+  });
+  function talkUp(e) {
+    if (!rec || tapMode) return;
+    if (leaving || (e && e.type === "pointerup" && outside(e))) { cancelTalk(); return; }
     if (Date.now() - downAt < 400) { tapMode = true; talkUI("rec", "tap again to send"); return; } // quick tap: keep recording
     stopRec();
   }
   $("talkBtn").addEventListener("pointerup", talkUp);
   $("talkBtn").addEventListener("pointercancel", talkUp);
   $("talkBtn").addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  $("talkCancel").addEventListener("pointerdown", function (e) { e.preventDefault(); e.stopPropagation(); cancelTalk(); });
 
   // video call
   var call = null;
