@@ -157,6 +157,21 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     send(out, 200, "application/json", body.toString().toByteArray())
                 } else denied(out)
                 "/api/stream" -> if (authed) stream(sock, out, isLocal(sock.inetAddress)) else denied(out)
+                // ---- Tapo Wi-Fi cameras around the house ----
+                "/api/tapo" -> if (authed) send(out, 200, "application/json", Tapo.json().toString().toByteArray()) else denied(out)
+                "/api/tapo/scan" -> if (authed) send(out, 200, "application/json", Tapo.scan().toString().toByteArray()) else denied(out)
+                "/api/tapo/save" -> if (authed) {
+                    val body = if (parts[0] == "POST" && contentLength in 1..20_000) {
+                        val b = ByteArray(contentLength); var got = 0
+                        while (got < contentLength) { val r = input.read(b, got, contentLength - got); if (r < 0) break; got += r }
+                        String(b, 0, got, Charsets.UTF_8)
+                    } else ""
+                    val res = try { Tapo.save(JSONObject(body)) } catch (_: Exception) { "error:Couldn't read that." }
+                    send(out, 200, "application/json", (if (res.startsWith("id:")) JSONObject().put("ok", true).put("id", res.drop(3)) else JSONObject().put("error", res.removePrefix("error:"))).toString().toByteArray())
+                } else denied(out)
+                "/api/tapo/delete" -> if (authed) { Tapo.delete(query["id"] ?: ""); send(out, 200, "application/json", "{\"ok\":true}".toByteArray()) } else denied(out)
+                "/api/tapo/snap" -> if (authed) tapoSnap(out, query["id"]) else denied(out)
+                "/api/tapo/stream" -> if (authed) tapoStream(sock, out, query["id"], isLocal(sock.inetAddress)) else denied(out)
                 "/api/torch" -> if (authed) {
                     val want = when (query["on"]) { "1", "true" -> true; "0", "false" -> false; else -> !Torch.on }
                     val err = Remote.onMain { Torch.set(ctx, want) ?: "" } ?: "busy"
@@ -340,6 +355,35 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             bm.compress(android.graphics.Bitmap.CompressFormat.JPEG, 62, bos); bm.recycle()
             bos.toByteArray()
         } catch (_: Exception) { jpg }
+    }
+
+    private fun tapoSnap(out: OutputStream, id: String?) {
+        val f = Tapo.feed(id, false) ?: return send(out, 404, "application/json", "{\"error\":\"No such camera\"}".toByteArray())
+        f.acquire()
+        try {
+            val jpg = f.waitFrame(if (f.latest != null) f.seq - 1 else 0, 8000)
+            if (jpg == null) send(out, 503, "application/json", JSONObject().put("error", f.error ?: "Camera starting…").toString().toByteArray())
+            else send(out, 200, "image/jpeg", jpg)
+        } finally { f.release() }
+    }
+
+    private fun tapoStream(sock: Socket, out: OutputStream, id: String?, hq: Boolean) {
+        val f = Tapo.feed(id, hq) ?: return send(out, 404, "application/json", "{\"error\":\"No such camera\"}".toByteArray())
+        f.acquire()
+        try {
+            sock.soTimeout = 0
+            val b = "babycamframe"
+            out.write(("HTTP/1.1 200 OK\r\nContent-Type: multipart/x-mixed-replace; boundary=$b\r\n" +
+                "Cache-Control: no-cache, no-store\r\nPragma: no-cache\r\nConnection: close\r\n\r\n").toByteArray())
+            var last = 0L
+            while (running && !sock.isClosed) {
+                val jpg = f.waitFrame(last, 5000) ?: continue
+                last = f.seq
+                out.write("--$b\r\nContent-Type: image/jpeg\r\nContent-Length: ${jpg.size}\r\n\r\n".toByteArray())
+                out.write(jpg); out.write("\r\n".toByteArray()); out.flush()
+            }
+        } catch (_: Exception) {
+        } finally { f.release() }
     }
 
     private fun stream(sock: Socket, out: OutputStream, hq: Boolean) {

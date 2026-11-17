@@ -163,7 +163,7 @@ class RelayClient {
             }
         }
         val path = j.optString("p")
-        if (!path.startsWith("/api/") || path.startsWith("/api/stream")) return
+        if (!path.startsWith("/api/") || path.startsWith("/api/stream") || path.startsWith("/api/tapo/stream")) return
         val (status, type, data) = local(j.optString("m", "GET"), path, body)
 
         val chunk = 45_000

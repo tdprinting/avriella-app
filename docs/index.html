@@ -388,6 +388,39 @@
   .call-ctl .end { background: var(--danger); }
   .call-ctl .end .i { transform: rotate(135deg); }
 
+  /* camera switcher + Tapo setup */
+  .cam-row { display: flex; gap: 8px; overflow-x: auto; margin: 0 -16px 12px; padding: 2px 16px 4px; scrollbar-width: none; }
+  .cam-row::-webkit-scrollbar { display: none; }
+  .cam-row button { flex: none; min-height: 40px; padding: 7px 14px 7px 10px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 7px;
+    color: var(--sub); background: var(--surface); border: 1px solid var(--line); }
+  .cam-row button .i { width: 19px; height: 19px; }
+  .cam-row button.on { color: #15172e; background: var(--ink); border-color: var(--ink); box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+  .cam-row button.add { color: var(--peach); border-style: dashed; border-color: rgba(255,184,148,.4); background: none; }
+  .cam-row button.edit { padding: 7px 10px; }
+  #stage.wide { aspect-ratio: 16 / 9; }
+  #stage.pip.wide { width: 160px; }
+  #stage.swap img { animation: camswap .5s var(--ease); }
+  @keyframes camswap { from { opacity: 0; filter: blur(8px); } }
+  .cam-form { text-align: left; max-height: calc(100dvh - 40px); overflow-y: auto; }
+  .cam-form h2 { text-align: center; }
+  .cam-form input { font-size: 17px; padding: 12px 14px; }
+  .found { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 0; padding: 10px 12px; margin-top: 8px; border-radius: 14px;
+    background: var(--surface); border: 1px solid var(--line); text-align: left; font-weight: 600; font-size: 14.5px; animation: rise .4s var(--ease) both; }
+  .found small { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--sub); }
+  .found small.ok { color: var(--mint); }
+  .found small.warn2 { color: var(--sun); }
+  .found.on { border-color: var(--peach); background: rgba(255,184,148,.1); }
+
+  /* parent's screen light */
+  .lightscreen { position: fixed; inset: 0; z-index: 95; background: #fffaf0; color: #3b3326; display: flex; align-items: flex-end; justify-content: center;
+    padding: 0 24px calc(env(safe-area-inset-bottom) + 28px); animation: lighton .35s ease both; cursor: pointer; }
+  .ls-glow { position: absolute; inset: 0; background: radial-gradient(circle at 50% 40%, #fff 0%, #fffaf0 60%, #fff1d6 100%); }
+  .ls-text { position: relative; text-align: center; display: flex; flex-direction: column; gap: 6px; max-width: 340px; opacity: .55; }
+  .ls-text b { font-size: 17px; }
+  .ls-text small { font-size: 13px; }
+  .ls-text button { margin-top: 10px; min-height: 42px; padding: 8px 16px; font-size: 14px; color: #3b3326; background: rgba(0,0,0,.07); display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
+  @keyframes lighton { from { opacity: 0; } }
+
   @media (max-width: 360px) {
     body { padding-left: 12px; padding-right: 12px; }
     .card { padding: 16px; }
@@ -468,6 +501,8 @@
     <symbol id="i-ear" viewBox="0 0 24 24"><path d="M7 9a5 5 0 0 1 10 0c0 3-3 4-3 6.5a3.5 3.5 0 0 1-6.3 2"/><path d="M10 9.5a2 2 0 0 1 4 0"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
     <symbol id="i-hand" viewBox="0 0 24 24"><path d="M9 12V5.2a1.6 1.6 0 0 1 3.2 0V11M12.2 10.5V4.2a1.6 1.6 0 0 1 3.2 0V11M15.4 10.8V6.2a1.6 1.6 0 0 1 3.2 0v7.3a7.5 7.5 0 0 1-7.5 7.5h-.6a6 6 0 0 1-4.8-2.4l-3.1-4.1a1.6 1.6 0 0 1 2.4-2.1L9 14.5V8.2"/></symbol>
+    <symbol id="i-dome" viewBox="0 0 24 24"><circle cx="12" cy="10" r="6.8"/><circle cx="12" cy="10" r="2.6"/><path d="M8.5 20.5h7M12 16.8v3.7"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8l1.6 2.3 2.7-.6.6 2.7 2.3 1.6-1.2 2.5 1.2 2.5-2.3 1.6-.6 2.7-2.7-.6L12 21.2l-1.6-2.3-2.7.6-.6-2.7-2.3-1.6L6 12.7 4.8 10.2l2.3-1.6.6-2.7 2.7.6z"/></symbol>
     <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8.5h14V12M12 8v12.5M12 8C10.5 4 6.5 4.5 7.5 7c.4 1 2.5 1 4.5 1zM12 8c1.5-4 5.5-3.5 4.5-1-.4 1-2.5 1-4.5 1z"/></symbol>
     <!-- voice filters -->
     <symbol id="v-normal" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9 10v.4M15 10v.4M8.6 14a4.6 4.6 0 0 0 6.8 0"/></symbol>
@@ -489,7 +524,7 @@
     <h1 id="title">Baby Cam</h1>
     <small><span class="dot" id="dot"></span><span id="sub">Nightlight for parents</span></small>
   </div>
-  <button class="round torch hidden" id="torch" aria-label="Turn her phone's flashlight on" title="Flashlight"><svg class="i"><use href="#i-torch"/></svg></button>
+  <button class="round torch hidden" id="torch" aria-label="Turn on your flashlight" title="Flashlight"><svg class="i"><use href="#i-torch"/></svg></button>
   <button class="round hidden" id="logout" aria-label="Change the code" title="Change the code"><svg class="i sm"><use href="#i-key"/></svg></button>
 </header>
 
@@ -575,6 +610,7 @@
 
   <!-- LIVE -->
   <div class="panel" data-tab="live">
+    <div class="cam-row" id="camSwitch"></div>
     <div class="glance">
       <span class="chip" id="mode">…</span>
       <span class="chip" id="battery">–</span>
@@ -679,6 +715,7 @@
         </div>
         <p class="warn hidden" id="pinWarn">Her phone may show an “App is pinned” popup when a show starts. To stop it for good: on her phone open the Avriella TV menu, tap “Basic lock”, then “Open Test DPC” and tick Avriella TV.</p>
       </div>
+      <label class="switch list-row"><span class="ic"><svg class="i"><use href="#i-torch"/></svg></span><span class="txt"><b>Her phone's flashlight</b><small>turns itself off after 10 minutes</small></span><input type="checkbox" id="herTorch"></label>
       <label class="switch list-row"><span class="ic"><svg class="i"><use href="#i-level"/></svg></span><span class="txt"><b>Keep video level</b><small>when she flips the phone</small></span><input type="checkbox" id="levelSw"></label>
       <label class="switch list-row"><span class="ic"><svg class="i"><use href="#i-search"/></svg></span><span class="txt"><b>Auto-find her phone</b><small id="findStatus">if its Wi-Fi address changes</small></span><input type="checkbox" id="autoFind"></label>
     </div>
@@ -740,6 +777,48 @@
   </div>
 </div>
 <div class="toast hidden" id="toast"></div>
+
+<div class="lightscreen hidden" id="lightScreen" role="button" aria-label="Turn the light off">
+  <div class="ls-glow"></div>
+  <div class="ls-text">
+    <b>Screen light</b>
+    <small>Turn your brightness all the way up. Tap anywhere to turn it off.</small>
+    <small>For the real flashlight: swipe down from the top-right corner and tap the flashlight.</small>
+    <button id="lsHer"><svg class="i sm"><use href="#i-torch"/></svg>Light up her phone too</button>
+  </div>
+</div>
+
+<div class="sheet hidden" id="camSheet">
+  <div class="glass sheet-card cam-form">
+    <h2 id="camSheetTitle">Add a Tapo camera</h2>
+    <details class="more" id="camHelp">
+      <summary><svg class="i sm"><use href="#i-sparkle"/></svg>First time? Turn on the camera's video link</summary>
+      <ol class="steps">
+        <li><span>Open the <b>Tapo</b> app and tap the camera.</span></li>
+        <li><span>Tap the <b>gear</b> (top right) → <b>Advanced Settings</b> → <b>Camera Account</b>.</span></li>
+        <li><span>Make a username and password (letters and numbers are easiest). You can use the same one on every camera.</span></li>
+        <li><span>Come back here, tap <b>Find cameras</b>, pick it and type that username and password.</span></li>
+      </ol>
+    </details>
+    <button class="wide btn-soft" id="camScan"><svg class="i sm"><use href="#i-search"/></svg>Find cameras on the Wi-Fi</button>
+    <div id="camFound"></div>
+    <label class="field" for="camName">Name</label>
+    <input id="camName" maxlength="30" placeholder="Crib" autocapitalize="words">
+    <label class="field" for="camIp">Address</label>
+    <input id="camIp" inputmode="decimal" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.4.49">
+    <label class="field" for="camUser">Camera Account username</label>
+    <input id="camUser" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="from the Tapo app">
+    <label class="field" for="camPass">Camera Account password</label>
+    <input id="camPass" type="password" autocomplete="off" placeholder="••••••••">
+    <div class="err" id="camErr"></div>
+    <button class="wide btn-main" id="camSave"><svg class="i sm"><use href="#i-check"/></svg>Save camera</button>
+    <div class="row" style="margin-top:10px">
+      <button class="btn-soft hidden" id="camDelete"><svg class="i sm"><use href="#i-trash"/></svg>Remove</button>
+      <button class="btn-soft" id="camCancel">Cancel</button>
+    </div>
+    <p class="note">The camera's login is kept on her phone and only used to open the camera's video on your Wi-Fi.</p>
+  </div>
+</div>
 
 <div class="callview hidden" id="callView">
   <video id="callThem" autoplay playsinline></video>
@@ -1188,6 +1267,11 @@
 
   var camSide = store.get("cam") === "back" ? "back" : "front";
   function api(p) { return "/api/" + p + "?key=" + encodeURIComponent(code || "") + "&cam=" + camSide + "&t=" + Date.now(); }
+  // which camera is on screen: "phone" (her phone's own camera) or the id of a Tapo camera
+  var camSrc = store.get("camSrc") || "phone", tapoCams = [];
+  function isPhone() { return camSrc === "phone"; }
+  function streamPath() { return isPhone() ? api("stream") : api("tapo/stream") + "&id=" + encodeURIComponent(camSrc); }
+  function snapPath() { return isPhone() ? api("snap") : api("tapo/snap") + "&id=" + encodeURIComponent(camSrc); }
   function flipLabel() { $("flipText").textContent = camSide === "front" ? "Back cam" : "Front cam"; }
 
   function login() {
@@ -1214,11 +1298,12 @@
   function layout() {
     var stage = $("stage"), img = $("cam");
     var W = stage.clientWidth, H = stage.clientHeight;
-    var rot = (deviceRot + userRot) % 360;
+    var rot = isPhone() ? (deviceRot + userRot) % 360 : (parseInt(store.get("rot_" + camSrc) || "0", 10) || 0);
+    var mir = isPhone() ? mirror : store.get("mir_" + camSrc) === "1";
     var sideways = rot === 90 || rot === 270;
     img.style.width = (sideways ? H : W) + "px";
     img.style.height = (sideways ? W : H) + "px";
-    img.style.transform = "translate(-50%,-50%) rotate(" + rot + "deg)" + (mirror ? " scaleX(-1)" : "");
+    img.style.transform = "translate(-50%,-50%) rotate(" + rot + "deg)" + (mir ? " scaleX(-1)" : "");
   }
   window.addEventListener("resize", layout);
 
@@ -1237,7 +1322,7 @@
     function next() {
       if (!streaming || gen !== streamGen) return;
       var asked = Date.now();
-      fetch(api("snap")).then(function (r) { if (r.status !== 200) throw new Error("cam"); return r.blob(); }).then(function (b) {
+      fetch(snapPath()).then(function (r) { if (r.status !== 200) throw new Error("cam"); return r.blob(); }).then(function (b) {
         if (gen !== streamGen) return;
         if (asked < shownAt) { setTimeout(next, 50); return; } // an older picture arrived late
         shownAt = asked;
@@ -1269,7 +1354,7 @@
       if (streaming) retryTimer = setTimeout(startStream, 3000);
     };
     overlay("Starting camera…", true);
-    img.src = api("stream");
+    img.src = streamPath();
   }
   function stopStream() {
     streaming = false; streamGen++;
@@ -1298,7 +1383,8 @@
       if (!babyLoaded) loadBaby();
       rememberAddrs(j);
       if (typeof j.rotation === "number" && j.rotation !== deviceRot) { deviceRot = j.rotation; layout(); }
-      if (j.error) overlay(j.error, false);
+      if (j.error && isPhone()) overlay(j.error, false);
+      if (!isPhone()) loadTapo();
       if (!streaming && !document.hidden) startStream();
       fails = 0;
     }).catch(function (e) {
@@ -1728,19 +1814,51 @@
     $("touchBtn").innerHTML = ic(touchLocked ? "i-unlock" : "i-lock", "sm") + (touchLocked ? "Unlock" : "Lock");
     $("touchBox").querySelector(".ic").innerHTML = ic(touchLocked ? "i-lock" : "i-hand");
   }
-  // ---------- Flashlight on her phone ----------
+  // ---------- Flashlight on her phone (Her phone tab) ----------
   var torchOn = false, torchSentAt = 0;
-  function paintTorch() {
-    $("torch").classList.toggle("on", torchOn);
-    $("torch").setAttribute("aria-label", torchOn ? "Turn her phone's flashlight off" : "Turn her phone's flashlight on");
-  }
-  $("torch").onclick = function () {
-    torchOn = !torchOn; torchSentAt = Date.now(); paintTorch();
-    fetch(api("torch") + "&on=" + (torchOn ? 1 : 0), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+  function paintTorch() { $("herTorch").checked = torchOn; }
+  function setHerTorch(on) {
+    torchOn = on; torchSentAt = Date.now(); paintTorch();
+    return fetch(api("torch") + "&on=" + (on ? 1 : 0), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       torchOn = !!j.torch; paintTorch();
-      if (j.error) toast(j.error); else toast(torchOn ? "Flashlight on · turns off in 10 min" : "Flashlight off");
-    }).catch(function () { torchOn = !torchOn; paintTorch(); });
-  };
+      toast(j.error ? j.error : torchOn ? "Her flashlight is on · off in 10 min" : "Her flashlight is off");
+    }).catch(function () { torchOn = !on; paintTorch(); toast("Couldn't reach her phone."); });
+  }
+  $("herTorch").onchange = function () { setHerTorch(this.checked); };
+
+  // ---------- Flashlight on this phone (the button in the corner) ----------
+  // Uses the iPhone's real flashlight when the browser allows it (secure page + torch support);
+  // otherwise the whole screen becomes a bright, warm light.
+  var myLight = null;
+  function paintMyLight() {
+    $("torch").classList.toggle("on", !!myLight);
+    $("torch").setAttribute("aria-label", myLight ? "Turn off your flashlight" : "Turn on your flashlight");
+  }
+  function screenLight() {
+    myLight = { screen: true }; paintMyLight();
+    $("lightScreen").classList.remove("hidden");
+  }
+  function myLightOff() {
+    if (myLight && myLight.stream) myLight.stream.getTracks().forEach(function (t) { t.stop(); });
+    myLight = null; paintMyLight();
+    $("lightScreen").classList.add("hidden");
+  }
+  function myLightOn() {
+    var md = navigator.mediaDevices;
+    if (!(window.isSecureContext && md && md.getUserMedia)) { screenLight(); return; }
+    myLight = { pending: true }; paintMyLight();
+    md.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false }).then(function (st) {
+      var t = st.getVideoTracks()[0], caps = t && t.getCapabilities ? t.getCapabilities() : {};
+      if (!caps.torch) { st.getTracks().forEach(function (x) { x.stop(); }); screenLight(); return; }
+      return t.applyConstraints({ advanced: [{ torch: true }] }).then(function () {
+        myLight = { stream: st }; paintMyLight(); toast("Your flashlight is on");
+      });
+    }).catch(function () { screenLight(); });
+  }
+  $("torch").onclick = function () { if (myLight) myLightOff(); else myLightOn(); };
+  $("lightScreen").addEventListener("click", function (e) { if (!e.target.closest("#lsHer")) myLightOff(); });
+  $("lsHer").onclick = function () { setHerTorch(true); };
+  document.addEventListener("visibilitychange", function () { if (document.hidden && myLight && myLight.stream) myLightOff(); });
   function updateTouch(j) {
     if (typeof j.torch === "boolean" && Date.now() - torchSentAt > 2500) { torchOn = j.torch; paintTorch(); }
     $("touchBox").classList.toggle("hidden", !j.touch);
@@ -1863,6 +1981,7 @@
 
   function startViewer() {
     show("viewer");
+    renderCams(); loadTapo(); if (!window._tapoT) window._tapoT = setInterval(loadTapo, 30000);
     layout();
     pollInfo();
     startStream();
@@ -1884,12 +2003,120 @@
     flipLabel(); layout(); stopStream(); pollInfo(); startStream();
   };
   flipLabel();
-  $("rotate").onclick = function () { userRot = (userRot + 90) % 360; store.set("rot", userRot); layout(); };
-  $("mirror").onclick = function () { mirror = !mirror; store.set("mirror", mirror ? "1" : "0"); layout(); };
+  $("rotate").onclick = function () {
+    if (isPhone()) { userRot = (userRot + 90) % 360; store.set("rot", userRot); }
+    else store.set("rot_" + camSrc, ((parseInt(store.get("rot_" + camSrc) || "0", 10) || 0) + 90) % 360);
+    layout();
+  };
+  $("mirror").onclick = function () {
+    if (isPhone()) { mirror = !mirror; store.set("mirror", mirror ? "1" : "0"); }
+    else store.set("mir_" + camSrc, store.get("mir_" + camSrc) === "1" ? "0" : "1");
+    layout();
+  };
+
+  // ---------- Tapo cameras: switch between her phone and the cameras around the house ----------
+  function loadTapo() {
+    return fetch(api("tapo"), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.cams) return;
+      tapoCams = j.cams;
+      if (!isPhone() && !tapoCams.some(function (c) { return c.id === camSrc; })) { selectCam("phone"); return; }
+      renderCams();
+      var c = curTapo();
+      if (c && c.error && (!lastFrameAt || Date.now() - lastFrameAt > 6000)) overlay(c.error, false);
+    }).catch(function () {});
+  }
+  function curTapo() { return tapoCams.filter(function (c) { return c.id === camSrc; })[0]; }
+  function renderCams() {
+    var box = $("camSwitch"); box.textContent = "";
+    function chip(label, icon, on, cls, fn) {
+      var b = document.createElement("button");
+      b.className = (on ? "on " : "") + (cls || ""); b.innerHTML = ic(icon) + (label ? "<span></span>" : "");
+      if (label) b.lastChild.textContent = label;
+      b.onclick = fn; box.appendChild(b); return b;
+    }
+    chip("Her phone", "i-live", isPhone(), "", function () { selectCam("phone"); });
+    tapoCams.forEach(function (c) { chip(c.name, "i-dome", c.id === camSrc, "", function () { selectCam(c.id); }); });
+    if (!isPhone()) chip("", "i-gear", false, "edit", function () { openCamSheet(curTapo()); }).setAttribute("aria-label", "Edit this camera");
+    chip(tapoCams.length ? "Add" : "Add a Tapo camera", "i-plus", false, "add", function () { openCamSheet(null); });
+  }
+  function selectCam(id) {
+    var changed = id !== camSrc;
+    camSrc = id; store.set("camSrc", id);
+    $("stage").classList.toggle("wide", !isPhone());
+    $("flip").classList.toggle("hidden", !isPhone());
+    renderCams();
+    if (!changed) return;
+    $("stage").classList.remove("swap"); void $("stage").offsetWidth; $("stage").classList.add("swap");
+    lastFrameAt = 0; layout(); stopStream(); startStream();
+  }
+  $("stage").classList.toggle("wide", !isPhone());
+  $("flip").classList.toggle("hidden", !isPhone());
+
+  var editCam = null;
+  function openCamSheet(c) {
+    editCam = c || null;
+    $("camSheetTitle").textContent = c ? "Edit " + c.name : "Add a Tapo camera";
+    $("camName").value = c ? c.name : ""; $("camIp").value = c ? c.ip : ""; $("camUser").value = c ? c.user : ""; $("camPass").value = "";
+    $("camPass").placeholder = c && c.hasLogin ? "unchanged" : "••••••••";
+    $("camErr").textContent = ""; $("camFound").textContent = "";
+    $("camDelete").classList.toggle("hidden", !c);
+    $("camHelp").open = !c && !tapoCams.length;
+    $("camSheet").classList.remove("hidden");
+  }
+  function closeCamSheet() { $("camSheet").classList.add("hidden"); $("camPass").value = ""; }
+  $("camCancel").onclick = closeCamSheet;
+  $("camSheet").addEventListener("click", function (e) { if (e.target === $("camSheet")) closeCamSheet(); });
+  $("camScan").onclick = function () {
+    var btn = this; btn.disabled = true; btn.innerHTML = '<span class="loader" style="width:20px;height:20px"></span>Searching the Wi-Fi…';
+    $("camFound").textContent = "";
+    fetch(api("tapo/scan"), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      var list = (j && j.found) || [];
+      if (!list.length) { $("camFound").innerHTML = '<p class="note">No cameras found. Make sure they’re on the same Wi-Fi as her phone.</p>'; return; }
+      list.forEach(function (f, i) {
+        var b = document.createElement("button"); b.className = "found"; b.style.animationDelay = i * 60 + "ms";
+        b.innerHTML = ic("i-dome") + "<span></span><small></small>";
+        b.children[1].textContent = f.ip;
+        var tag = b.children[2];
+        tag.textContent = f.saved ? "already added" : f.rtsp ? "ready" : "needs a Camera Account";
+        tag.className = f.saved ? "" : f.rtsp ? "ok" : "warn2";
+        b.onclick = function () {
+          Array.prototype.forEach.call($("camFound").children, function (x) { x.classList.toggle("on", x === b); });
+          $("camIp").value = f.ip;
+          if (!$("camName").value) $("camName").value = "Camera " + (i + 1);
+          if (!f.rtsp) $("camErr").textContent = "This camera's video link is off. Make a Camera Account for it in the Tapo app first (see the steps above).";
+          else $("camErr").textContent = "";
+          $("camUser").focus();
+        };
+        $("camFound").appendChild(b);
+      });
+    }).catch(function () { $("camFound").innerHTML = '<p class="note">Couldn’t search. Is her phone on?</p>'; })
+      .then(function () { btn.disabled = false; btn.innerHTML = ic("i-search", "sm") + "Find cameras on the Wi-Fi"; });
+  };
+  $("camSave").onclick = function () {
+    var body = { id: editCam ? editCam.id : "", name: $("camName").value.trim(), ip: $("camIp").value.trim(), user: $("camUser").value.trim(), pass: $("camPass").value };
+    if (!body.ip) { $("camErr").textContent = "Pick a camera above or type its address."; return; }
+    $("camSave").disabled = true; $("camErr").textContent = "";
+    fetch("/api/tapo/save?key=" + encodeURIComponent(code || ""), { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } })
+      .then(function (r) { return r.json(); }).then(function (j) {
+        if (j.error) throw new Error(j.error);
+        closeCamSheet(); toast((body.name || "Camera") + " saved");
+        return loadTapo().then(function () { selectCam(j.id); if (curTab !== "live") setTab("live", true); });
+      }).catch(function (e) { $("camErr").textContent = e.message || "Couldn't save that."; })
+      .then(function () { $("camSave").disabled = false; });
+  };
+  $("camDelete").onclick = function () {
+    if (!editCam || !confirm("Remove " + editCam.name + " from Baby Cam?")) return;
+    var id = editCam.id;
+    fetch(api("tapo/delete") + "&id=" + encodeURIComponent(id), { cache: "no-store" }).then(function () {
+      closeCamSheet(); toast("Camera removed");
+      if (camSrc === id) selectCam("phone");
+      loadTapo();
+    });
+  };
   $("snap").onclick = function () {
-    if (!RELAY) { window.open(api("snap"), "_blank"); return; }
+    if (!RELAY) { window.open(snapPath(), "_blank"); return; }
     var w = window.open("", "_blank");
-    fetch(api("snap")).then(function (r) { return r.blob(); }).then(function (b) { var u = URL.createObjectURL(b); if (w) w.location.href = u; else location.href = u; });
+    fetch(snapPath()).then(function (r) { return r.blob(); }).then(function (b) { var u = URL.createObjectURL(b); if (w) w.location.href = u; else location.href = u; });
   };
 
   // ---------- Now playing + remote control of her phone ----------

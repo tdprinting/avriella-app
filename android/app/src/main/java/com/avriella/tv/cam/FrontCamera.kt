@@ -109,7 +109,11 @@ class FrontCamera(private val ctx: Context) {
     private fun request(cd: CameraDevice, r: ImageReader) = cd.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
         addTarget(r.surface)
         if (holdsBack && Torch.on) set(android.hardware.camera2.CaptureRequest.FLASH_MODE, android.hardware.camera2.CaptureRequest.FLASH_MODE_TORCH)
+        fpsRange?.let { set(android.hardware.camera2.CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE, it) }
     }.build()
+
+    /** Frame-rate range asked of the camera on home Wi-Fi (null = camera's default). */
+    private var fpsRange: android.util.Range<Int>? = null
 
     /** Blocks until a frame newer than [after] exists (or timeout). */
     fun waitFrame(after: Long, timeoutMs: Long): ByteArray? {
@@ -161,18 +165,32 @@ class FrontCamera(private val ctx: Context) {
             // home Wi-Fi: 720p at ~25 fps. Over the internet relay: small 640x480 frames so they get through quickly.
             val size = if (hq) sizes.filter { it.width <= 1280 && it.height <= 960 }.minByOrNull { abs(it.width * it.height - 1280 * 720) } ?: sizes.last()
                 else sizes.filter { it.width <= 960 }.minByOrNull { abs(it.width * it.height - 640 * 480) } ?: sizes.last()
-            val gap = if (hq) 38L else 80L
-            val quality = if (hq) 82 else 60
+            val gap = if (hq) 33L else 80L
+            val quality = if (hq) 78 else 60
+            // a range topping out at 30 fps whose lowest is as close to 24 as possible: smooth, but still bright enough at night
+            fpsRange = if (!hq) null else (ch.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES) ?: arrayOf())
+                .filter { it.upper in 30..31 }.minByOrNull { abs(it.lower - 24) * 2 + (if (it.lower < 24) 1 else 0) }
+            interleaved = null
             val r = ImageReader.newInstance(size.width, size.height, ImageFormat.YUV_420_888, 3)
             r.setOnImageAvailableListener({ rd ->
                 val img = try { rd.acquireLatestImage() } catch (_: Exception) { null } ?: return@setOnImageAvailableListener
                 try {
                     val now = SystemClock.uptimeMillis()
-                    if (now - lastFrame >= gap) {
+                    if (now - lastFrame >= gap && busy.get() < 2) {
                         lastFrame = now
-                        val jpg = toJpeg(img, quality)
-                        if (error != null) error = null // pictures are flowing, so any old hiccup message is out of date
-                        synchronized(lock) { latest = jpg; seq++; lock.notifyAll() }
+                        val n = ++frameNo
+                        val w = img.width and 1.inv(); val h = img.height and 1.inv()
+                        val buf = toNv21(img, w, h)
+                        busy.incrementAndGet()
+                        encoders.execute {
+                            try {
+                                val bos = ByteArrayOutputStream(w * h / 5)
+                                YuvImage(buf, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), quality, bos)
+                                val jpg = bos.toByteArray()
+                                if (error != null) error = null // pictures are flowing, so any old hiccup message is out of date
+                                synchronized(lock) { if (n > shownNo) { shownNo = n; latest = jpg; seq++; lock.notifyAll() } }
+                            } catch (e: Exception) { Log.w("FrontCamera", "jpeg", e) } finally { pool.offer(buf); busy.decrementAndGet() }
+                        }
                     }
                 } catch (e: Exception) {
                     Log.w("FrontCamera", "frame", e)
@@ -231,40 +249,55 @@ class FrontCamera(private val ctx: Context) {
         thread = null; handler = null
     }
 
-    private var nv = ByteArray(0)
+    private val encoders = java.util.concurrent.Executors.newFixedThreadPool(2)
+    private val busy = java.util.concurrent.atomic.AtomicInteger(0)
+    private val pool = java.util.concurrent.ArrayBlockingQueue<ByteArray>(4)
+    private var frameNo = 0L
+    private var shownNo = 0L
     private var uArr = ByteArray(0)
     private var vArr = ByteArray(0)
+    /** true when the camera hands over its colour as one V,U,V,U… block (then it can be copied a row at a time). */
+    private var interleaved: Boolean? = null
 
-    private fun toJpeg(img: Image, quality: Int): ByteArray {
-        val w = img.width; val h = img.height
-        if (nv.size != w * h * 3 / 2) nv = ByteArray(w * h * 3 / 2)
-        val out = nv
+    private fun toNv21(img: Image, w: Int, h: Int): ByteArray {
+        val need = w * h * 3 / 2
+        var out = pool.poll()
+        while (out != null && out.size != need) out = pool.poll()
+        if (out == null) out = ByteArray(need)
         val yP = img.planes[0]; val uP = img.planes[1]; val vP = img.planes[2]
         val yb = yP.buffer; val ys = yP.rowStride
-        for (row in 0 until h) {
-            yb.position(row * ys)
-            yb.get(out, row * w, w)
-        }
-        // copy the color planes out in one go (reading a camera buffer byte by byte is very slow at 720p)
+        if (ys == w) { yb.position(0); yb.get(out, 0, w * h) }
+        else for (row in 0 until h) { yb.position(row * ys); yb.get(out, row * w, w) }
         val ub = uP.buffer; val vb = vP.buffer
         ub.position(0); vb.position(0)
-        if (uArr.size < ub.remaining()) uArr = ByteArray(ub.remaining())
-        if (vArr.size < vb.remaining()) vArr = ByteArray(vb.remaining())
         val un = ub.remaining(); val vn = vb.remaining()
+        if (uArr.size < un) uArr = ByteArray(un)
+        if (vArr.size < vn) vArr = ByteArray(vn)
         ub.get(uArr, 0, un); vb.get(vArr, 0, vn)
         val urs = uP.rowStride; val ups = uP.pixelStride
         val vrs = vP.rowStride; val vps = vP.pixelStride
+        if (interleaved == null) interleaved = ups == 2 && vps == 2 && urs == vrs &&
+            (0 until minOf(64, un / 2 - 1)).all { vArr[it * 2 + 1] == uArr[it * 2] }
         var o = w * h
-        for (row in 0 until h / 2) {
-            val vr = row * vrs; val ur = row * urs
-            for (col in 0 until w / 2) {
-                val vi = vr + col * vps; val ui = ur + col * ups
-                out[o++] = if (vi < vn) vArr[vi] else 0x80.toByte()
-                out[o++] = if (ui < un) uArr[ui] else 0x80.toByte()
+        if (interleaved == true) {
+            // already in NV21 order: copy each row of colour in one go
+            for (row in 0 until h / 2) {
+                val src = row * vrs
+                val n = minOf(w, vn - src)
+                System.arraycopy(vArr, src, out, o, n)
+                if (n < w) out[o + w - 1] = uArr[row * urs + w - 2]
+                o += w
+            }
+        } else {
+            for (row in 0 until h / 2) {
+                val vr = row * vrs; val ur = row * urs
+                for (col in 0 until w / 2) {
+                    val vi = vr + col * vps; val ui = ur + col * ups
+                    out[o++] = if (vi < vn) vArr[vi] else 0x80.toByte()
+                    out[o++] = if (ui < un) uArr[ui] else 0x80.toByte()
+                }
             }
         }
-        val bos = ByteArrayOutputStream(w * h / 4)
-        YuvImage(out, ImageFormat.NV21, w, h, null).compressToJpeg(Rect(0, 0, w, h), quality, bos)
-        return bos.toByteArray()
+        return out
     }
 }
