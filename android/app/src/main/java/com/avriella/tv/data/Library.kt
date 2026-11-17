@@ -45,6 +45,7 @@ class Settings {
     /** Turn the video picture so it stays level while she flips the phone. */
     var levelVideo = false
     var camEnabled = false
+    var relaySecret = ""
     var camCode = ""
     /** Off: iPhones on the same Wi-Fi / hotspot connect without a code. */
     var camRequireCode = false
@@ -74,6 +75,7 @@ object Library {
             settings.camCode = (100000..999999).random().toString()
             save()
         }
+        if (settings.relaySecret.isEmpty()) { settings.relaySecret = com.avriella.tv.cam.RelayClient.newSecret(); save() }
     }
 
     fun newId(): String = UUID.randomUUID().toString().replace("-", "").take(16)
@@ -220,6 +222,7 @@ object Library {
                 settings.camEnabled = s.optBoolean("camEnabled", false)
                 settings.camCode = s.optString("camCode", "")
                 settings.camRequireCode = s.optBoolean("camRequireCode", false)
+                settings.relaySecret = s.optString("relaySecret", "")
                 settings.lastVideoId = s.optString("lastVideo").ifEmpty { null }
                 settings.lastShelfId = s.optString("lastShelf").ifEmpty { null }
             }
@@ -258,6 +261,7 @@ object Library {
                 put("sleepDefault", settings.sleepDefaultMin); put("relockSec", settings.relockSec)
                 put("lockHint", settings.lockHint); put("brightness", settings.brightness); put("levelVideo", settings.levelVideo)
                 put("camEnabled", settings.camEnabled); put("camCode", settings.camCode); put("camRequireCode", settings.camRequireCode)
+                put("relaySecret", settings.relaySecret)
                 put("lastVideo", settings.lastVideoId ?: ""); put("lastShelf", settings.lastShelfId ?: "")
             })
             val tmp = File(file.path + ".tmp")

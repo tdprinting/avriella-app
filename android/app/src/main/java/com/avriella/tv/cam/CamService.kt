@@ -17,6 +17,7 @@ class CamService : Service() {
     private var cam: FrontCamera? = null
     private var server: CamServer? = null
     private var mdns: MdnsResponder? = null
+    private var relay: RelayClient? = null
     private var wifiLock: WifiManager.WifiLock? = null
     private var wake: PowerManager.WakeLock? = null
 
@@ -48,6 +49,7 @@ class CamService : Service() {
         cam = c
         server = CamServer(applicationContext, c).also { android.util.Log.i("AvriellaCam", "server on port " + it.start()) }
         mdns = MdnsResponder(applicationContext).also { it.start() }
+        relay = RelayClient().also { it.start() }
         CamState.running = true
     }
 
@@ -77,6 +79,7 @@ class CamService : Service() {
         CamState.running = false
         server?.stop()
         mdns?.stop()
+        relay?.stop()
         cam?.shutdown()
         try { wifiLock?.release() } catch (_: Exception) {}
         try { wake?.release() } catch (_: Exception) {}

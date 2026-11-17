@@ -311,6 +311,7 @@
       <button class="btn-main" id="openNow">▶ Open now</button>
       <button class="btn-soft" id="change">✏️ Change</button>
     </div>
+    <button class="wide btn-soft hidden" id="relayGo" style="margin-top:10px">🌍 Connect from anywhere</button>
     <div class="seg" id="placeSeg" style="margin-top:12px">
       <button data-v="home">🏠<small>Home Wi-Fi</small></button>
       <button data-v="car">🚗<small>Car / no Wi-Fi</small></button>
@@ -490,7 +491,7 @@
   </div>
 </div>
 <div class="toast hidden" id="toast"></div>
-<div class="flip hidden" id="flip">
+<div class="flip hidden" id="flipbook">
   <img id="flipA" alt=""><img id="flipB" alt="" style="opacity:0">
   <div class="flip-top"><b id="flipTitle"></b><small id="flipSub"></small></div>
   <div class="flip-bottom">
@@ -527,7 +528,156 @@
 
   // ---------- Hosted on GitHub Pages (https): just help find the phone ----------
   var onPhone = location.protocol === "http:" && location.pathname.indexOf("/api/") !== 0 && !/github\.io$/.test(location.hostname);
-  if (!onPhone) {
+  // ---------- "From anywhere": encrypted relay through free public MQTT brokers ----------
+  // Her phone keeps a connection to these relays; we send requests there and her phone answers.
+  // Everything is AES-256-GCM encrypted with a secret only her phone and paired iPhones know.
+  var RELAY_BROKERS = ["wss://broker.emqx.io:8084/mqtt", "wss://broker.hivemq.com:8884/mqtt"];
+  var Relay = (function () {
+    var enc = new TextEncoder(), dec = new TextDecoder();
+    var key = null, topic = "", cid = "", conns = [], pending = {}, readyWaiters = [];
+    function cat() { var n = 0, i, a = arguments; for (i = 0; i < a.length; i++) n += a[i].length; var o = new Uint8Array(n), p = 0; for (i = 0; i < a.length; i++) { o.set(a[i], p); p += a[i].length; } return o; }
+    function str(s) { var b = enc.encode(s); return cat(new Uint8Array([b.length >> 8, b.length & 255]), b); }
+    function pkt(type, body) {
+      var len = body.length, h = [type];
+      do { var d = len % 128; len = Math.floor(len / 128); if (len > 0) d |= 128; h.push(d); } while (len > 0);
+      return cat(new Uint8Array(h), body);
+    }
+    function b64(u8) { var s = "", i; for (i = 0; i < u8.length; i += 32768) s += String.fromCharCode.apply(null, u8.subarray(i, i + 32768)); return btoa(s); }
+    function unb64(s) { var bin = atob(s), u = new Uint8Array(bin.length); for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u; }
+    function hex(buf) { return Array.prototype.map.call(new Uint8Array(buf), function (x) { return ("0" + x.toString(16)).slice(-2); }).join(""); }
+    function rand(n) { var u = new Uint8Array(n); crypto.getRandomValues(u); return hex(u); }
+    function encrypt(obj) {
+      var iv = new Uint8Array(12); crypto.getRandomValues(iv);
+      return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, enc.encode(JSON.stringify(obj))).then(function (ct) { return cat(iv, new Uint8Array(ct)); });
+    }
+    function decrypt(u8) {
+      return crypto.subtle.decrypt({ name: "AES-GCM", iv: u8.subarray(0, 12) }, key, u8.subarray(12)).then(function (pt) { return JSON.parse(dec.decode(pt)); });
+    }
+    function anyAlive() { return conns.some(function (c) { return c.alive; }); }
+    function stateChanged() {
+      if (anyAlive()) { var w = readyWaiters; readyWaiters = []; w.forEach(function (f) { f(); }); }
+      if (Relay.onstate) Relay.onstate(anyAlive());
+    }
+    function onMessage(u8) {
+      decrypt(u8).then(function (j) {
+        var p = pending[j.id]; if (!p) return;
+        p.parts[j.seq] = unb64(j.b || ""); p.n = j.n; p.s = j.s; p.t = j.t;
+        for (var i = 0; i < p.n; i++) if (!p.parts[i]) return;
+        delete pending[j.id]; clearTimeout(p.timer);
+        p.resolve(new Response(cat.apply(null, p.parts.slice(0, p.n)), { status: p.s || 200, headers: { "Content-Type": p.t || "application/octet-stream" } }));
+      }).catch(function () {});
+    }
+    function Conn(url) {
+      var self = this; self.alive = false;
+      var ws, buf = new Uint8Array(0), ping = null;
+      function connect() {
+        try { ws = new WebSocket(url, ["mqtt"]); } catch (e) { setTimeout(connect, 5000); return; }
+        ws.binaryType = "arraybuffer";
+        ws.onopen = function () { ws.send(pkt(0x10, cat(str("MQTT"), new Uint8Array([4, 2, 0, 60]), str(cid)))); };
+        ws.onmessage = function (e) {
+          buf = cat(buf, new Uint8Array(e.data));
+          while (buf.length >= 2) {
+            var mult = 1, len = 0, i = 1, d;
+            do { if (i >= buf.length) return; d = buf[i++]; len += (d & 127) * mult; mult *= 128; } while (d & 128);
+            if (buf.length < i + len) return;
+            var type = buf[0], body = buf.subarray(i, i + len); buf = buf.slice(i + len);
+            if ((type >> 4) === 2) ws.send(pkt(0x82, cat(new Uint8Array([0, 1]), str("avriella/" + topic + "/a/" + cid), new Uint8Array([0]))));
+            else if ((type >> 4) === 9) {
+              self.alive = true; stateChanged();
+              clearInterval(ping); ping = setInterval(function () { try { ws.send(new Uint8Array([0xC0, 0])); } catch (e) {} }, 40000);
+            } else if ((type >> 4) === 3) {
+              var tl = (body[0] << 8) | body[1], off = 2 + tl + (((type >> 1) & 3) ? 2 : 0);
+              onMessage(body.slice(off));
+            }
+          }
+        };
+        ws.onclose = function () { self.alive = false; clearInterval(ping); buf = new Uint8Array(0); stateChanged(); setTimeout(connect, 3000); };
+        ws.onerror = function () { try { ws.close(); } catch (e) {} };
+      }
+      self.publish = function (t, u8) { if (self.alive) try { ws.send(pkt(0x30, cat(str(t), u8))); } catch (e) {} };
+      connect();
+    }
+    return {
+      onstate: null,
+      start: function (secret) {
+        if (key) return Promise.resolve();
+        cid = "ip" + rand(8);
+        return Promise.all([
+          crypto.subtle.digest("SHA-256", enc.encode("avriella-key|" + secret)),
+          crypto.subtle.digest("SHA-256", enc.encode("avriella-topic|" + secret))
+        ]).then(function (r) {
+          topic = hex(r[1]).slice(0, 32);
+          return crypto.subtle.importKey("raw", r[0], "AES-GCM", false, ["encrypt", "decrypt"]);
+        }).then(function (k) { key = k; conns = RELAY_BROKERS.map(function (u) { return new Conn(u); }); });
+      },
+      alive: anyAlive,
+      ready: function (ms) {
+        return new Promise(function (res, rej) {
+          if (anyAlive()) return res();
+          var t = setTimeout(function () { rej(new Error("Can't reach the relay. Is this iPhone online?")); }, ms || 10000);
+          readyWaiters.push(function () { clearTimeout(t); res(); });
+        });
+      },
+      fetch: function (url, opts) {
+        opts = opts || {};
+        var bodyP = opts.body ? (opts.body.arrayBuffer ? opts.body.arrayBuffer() : Promise.resolve(enc.encode(String(opts.body)).buffer)) : Promise.resolve(null);
+        return Relay.ready(10000).then(function () { return bodyP; }).then(function (ab) {
+          var id = rand(8), chunk = 45000, body = ab ? new Uint8Array(ab) : null;
+          var n = body ? Math.max(1, Math.ceil(body.length / chunk)) : 1;
+          var msgs = [];
+          for (var s = 0; s < n; s++) {
+            var m = { id: id, cid: cid, ts: Date.now(), m: opts.method || "GET", p: url, seq: s, n: n };
+            if (body) m.b = b64(body.subarray(s * chunk, (s + 1) * chunk));
+            msgs.push(m);
+          }
+          return new Promise(function (resolve, reject) {
+            pending[id] = { parts: [], n: 1, resolve: resolve, timer: setTimeout(function () { delete pending[id]; reject(new Error("Her phone didn't answer.")); }, body ? 60000 : 25000) };
+            // send each piece through every relay; her phone ignores the duplicates
+            msgs.reduce(function (p, m) {
+              return p.then(function () { return encrypt(m); }).then(function (u8) {
+                conns.forEach(function (c) { c.publish("avriella/" + topic + "/q", u8); });
+              });
+            }, Promise.resolve()).catch(reject);
+          });
+        });
+      }
+    };
+  })();
+
+  var relayKey = store.get("relayKey");
+  var RELAY = !onPhone && !!relayKey && /(^#|&)relay(&|$)/.test(location.hash.replace(/^#/, "#&"));
+  if (RELAY) {
+    Relay.start(relayKey);
+    var realFetch = window.fetch.bind(window);
+    window.fetch = function (url, opts) {
+      if (typeof url === "string" && url.indexOf("/api/") === 0) return Relay.fetch(url, opts);
+      return realFetch(url, opts);
+    };
+    // pictures (thumbnails, monthly photos) come through the relay too
+    var blobCache = {};
+    var relayImg = function (img) {
+      var u = img.getAttribute("src");
+      if (!u || u.indexOf("/api/") !== 0 || img.id === "cam") return;
+      if (blobCache[u]) { img.loading = "eager"; img.src = blobCache[u]; return; }
+      img.removeAttribute("src"); img.setAttribute("data-relay", u);
+      Relay.fetch(u).then(function (r) { if (r.status !== 200) throw 0; return r.blob(); }).then(function (b) {
+        var bu = URL.createObjectURL(b); blobCache[u] = bu;
+        if (img.getAttribute("data-relay") === u) { img.loading = "eager"; img.src = bu; }
+      }).catch(function () {});
+    };
+    new MutationObserver(function (muts) {
+      muts.forEach(function (m) {
+        if (m.type === "attributes") { if (m.target.tagName === "IMG") relayImg(m.target); return; }
+        Array.prototype.forEach.call(m.addedNodes, function (n) {
+          if (n.nodeType !== 1) return;
+          if (n.tagName === "IMG") relayImg(n);
+          if (n.querySelectorAll) Array.prototype.forEach.call(n.querySelectorAll("img"), relayImg);
+        });
+      });
+    }).observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["src"] });
+  }
+
+  if (!onPhone && !RELAY) {
     show("launcher");
     var standalone = window.navigator.standalone === true || (window.matchMedia && matchMedia("(display-mode: standalone)").matches);
     var isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -537,9 +687,11 @@
 
     // Her phone hands over its away-from-home (Tailscale) address once, then sends us straight back.
     (function () {
-      var q = new URLSearchParams(location.search), rem = q.get("remember"), back = q.get("back") || "";
-      if (!rem) return;
-      if (/^100\.\d+\.\d+\.\d+:\d+$/.test(rem)) store.set("remoteAddr", rem);
+      var q = new URLSearchParams(location.search), h = new URLSearchParams(location.hash.replace(/^#/, ""));
+      var rem = q.get("remember") || h.get("remember"), pair = h.get("pair"), back = h.get("back") || q.get("back") || "";
+      if (!rem && !pair) return;
+      if (rem && /^100\.\d+\.\d+\.\d+:\d+$/.test(rem)) store.set("remoteAddr", rem);
+      if (pair && /^[A-Za-z0-9_-]{20,64}$/.test(pair)) store.set("relayKey", pair);
       history.replaceState(null, "", location.pathname);
       var m = /^http:\/\/([^\/:]+)(:\d+)?\//.exec(back);
       if (m && /^(avriella\.local|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|100\.\d+\.\d+\.\d+)$/.test(m[1])) location.replace(back);
@@ -590,6 +742,7 @@
         ping(a).then(function (ok) {
           left--;
           if (ok && !won) { won = true; store.set("lastSeen", ok); location.href = "http://" + ok + "/"; }
+          else if (left === 0 && !won && store.get("relayKey") && store.get("manual") !== "1") goRelay();
           else if (left === 0 && !won) {
             // Nothing answered a quick check. Away from home, her Tailscale address is the one that works
             // (it works at home too); otherwise try her phone's name.
@@ -600,6 +753,9 @@
         });
       });
     }
+    function goRelay() { location.replace(location.pathname + "#relay"); location.reload(); }
+    $("relayGo").classList.toggle("hidden", !store.get("relayKey"));
+    $("relayGo").onclick = function () { clearTimeout(autoTimer); goRelay(); };
     function showSetup() {
       clearTimeout(autoTimer);
       $("connecting").classList.add("hidden");
@@ -712,7 +868,37 @@
     $("overlay").querySelector(".spinner").style.display = spin ? "" : "none";
   }
 
+  var streamGen = 0;
+  function relayStream() {
+    clearTimeout(retryTimer); streaming = true;
+    var gen = ++streamGen, img = $("cam");
+    overlay("Connecting from anywhere…", true);
+    var shownAt = 0;
+    function next() {
+      if (!streaming || gen !== streamGen) return;
+      var asked = Date.now();
+      fetch(api("snap")).then(function (r) { if (r.status !== 200) throw new Error("cam"); return r.blob(); }).then(function (b) {
+        if (gen !== streamGen) return;
+        if (asked < shownAt) { setTimeout(next, 50); return; } // an older picture arrived late
+        shownAt = asked;
+        var u = URL.createObjectURL(b), old = img._blob;
+        img.onload = function () {
+          lastFrameAt = Date.now(); overlay(""); $("dot").classList.add("live"); $("liveTag").classList.remove("hidden");
+          if (old) URL.revokeObjectURL(old);
+        };
+        img.onerror = null; img._blob = u; img.src = u;
+        setTimeout(next, 50);
+      }).catch(function () {
+        if (gen !== streamGen) return;
+        overlay(Relay.alive() ? "Waiting for her phone…" : "Connecting to the relay…", true);
+        setTimeout(next, 2500);
+      });
+    }
+    // two requests in flight at once roughly doubles the picture rate over the relay
+    next(); setTimeout(next, 350);
+  }
   function startStream() {
+    if (RELAY) { relayStream(); return; }
     clearTimeout(retryTimer);
     streaming = true;
     var img = $("cam");
@@ -726,7 +912,7 @@
     img.src = api("stream");
   }
   function stopStream() {
-    streaming = false;
+    streaming = false; streamGen++;
     clearTimeout(retryTimer);
     $("cam").src = "";
     $("dot").classList.remove("live");
@@ -757,6 +943,7 @@
       if (e.message === "auth") return;
       $("mode").textContent = "Can't reach her phone"; $("mode").classList.remove("on");
       fails++;
+      if (RELAY) { $("mode").textContent = Relay.alive() ? "Her phone isn't answering" : "Connecting to the relay…"; return; }
       if (fails >= 2 && autoFind && !scanning && !document.hidden) findPhone();
     });
   }
@@ -771,7 +958,7 @@
       if (!j || !j.age) return; baby = j; renderBaby();
     }).catch(function () {});
   }
-  setInterval(function () { if (babyLoaded && !document.hidden && $("flip").classList.contains("hidden")) loadBaby(); }, 60000);
+  setInterval(function () { if (babyLoaded && !document.hidden && $("flipbook").classList.contains("hidden")) loadBaby(); }, 60000);
   function kindOf(id) { var k = (baby.kinds || []).filter(function (x) { return x.id === id; })[0]; return k || { id: id, emoji: "📝", label: "Note" }; }
   function agoTxt(t) {
     var m = Math.floor((Date.now() - t) / 60000);
@@ -882,12 +1069,12 @@
   function openFlip(startMonth, play) {
     flipMonths = (baby.photos || []).map(function (p) { return p.month; }).sort(function (x, y) { return x - y; });
     if (!flipMonths.length) { toast("Add a photo first."); return; }
-    $("flip").classList.remove("hidden");
+    $("flipbook").classList.remove("hidden");
     $("flipDots").innerHTML = flipMonths.map(function () { return "<i></i>"; }).join("");
     flipPlaying = play; $("flipPlay").textContent = play ? "⏸" : "▶";
     var i = flipMonths.indexOf(startMonth); flipShow(i < 0 ? 0 : i, false); flipRestart();
   }
-  function closeFlip() { $("flip").classList.add("hidden"); clearTimeout(flipTimer); }
+  function closeFlip() { $("flipbook").classList.add("hidden"); clearTimeout(flipTimer); }
   function flipSrc(m) { var p = baby.photos.filter(function (x) { return x.month === m; })[0]; return bapi("/photo", "&month=" + m + "&t=" + (p ? p.t : 0)); }
   function flipShow(i, animate) {
     flipI = i; var m = flipMonths[i];
@@ -961,8 +1148,20 @@
   };
 
   // ---------- Remember every way to reach her phone (incl. Tailscale for when you're away) ----------
+  var pairChecked = false;
   function rememberAddrs(j) {
+    if (RELAY) return;
     var port = location.port || "8080";
+    if (!pairChecked && !document.hidden) {
+      pairChecked = true;
+      fetch("/api/pair?key=" + encodeURIComponent(code || ""), { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).then(function (p) {
+        if (!p || !p.secret || store.get("pairHanded") === p.secret) return;
+        store.set("pairHanded", p.secret);
+        var h = "#pair=" + encodeURIComponent(p.secret) + (j.tailscale ? "&remember=" + encodeURIComponent(j.tailscale + ":" + port) : "") + "&back=" + encodeURIComponent(location.href.split("#")[0]);
+        if (j.tailscale) store.set("tsHanded", j.tailscale + ":" + port);
+        location.replace("https://tdprinting.github.io/avriella-app/docs/" + h);
+      }).catch(function () {});
+    }
     if (j.tailscale) {
       var ts = j.tailscale + ":" + port;
       store.set("tsAddr", ts);
@@ -1048,7 +1247,7 @@
     infoTimer = setInterval(function () {
       pollInfo();
       // MJPEG stalls silently sometimes on iOS; kick it if no frame for a while
-      if (streaming && lastFrameAt && Date.now() - lastFrameAt > 12000) { lastFrameAt = 0; startStream(); }
+      if (!RELAY && streaming && lastFrameAt && Date.now() - lastFrameAt > 12000) { lastFrameAt = 0; startStream(); }
     }, 4000);
   }
 
@@ -1061,7 +1260,11 @@
   flipLabel();
   $("rotate").onclick = function () { userRot = (userRot + 90) % 360; store.set("rot", userRot); layout(); };
   $("mirror").onclick = function () { mirror = !mirror; store.set("mirror", mirror ? "1" : "0"); layout(); };
-  $("snap").onclick = function () { window.open(api("snap"), "_blank"); };
+  $("snap").onclick = function () {
+    if (!RELAY) { window.open(api("snap"), "_blank"); return; }
+    var w = window.open("", "_blank");
+    fetch(api("snap")).then(function (r) { return r.blob(); }).then(function (b) { var u = URL.createObjectURL(b); if (w) w.location.href = u; else location.href = u; });
+  };
 
   // ---------- Now playing + remote control of her phone ----------
   var lib = null, libTimer = null, curVideo = "", curShelf = "", isPlaying = false, tab = store.get("tab") || "__all__";
@@ -1345,7 +1548,8 @@
     if (e.persisted && !$("viewer").classList.contains("hidden")) { fails = 0; pollInfo(); startStream(); }
   });
 
-  $("foot").textContent = "Connected to " + location.host + " on your Wi-Fi";
+  $("foot").textContent = RELAY ? "🌍 Connected from anywhere · end-to-end encrypted" : "Connected to " + location.host + " on your Wi-Fi";
+  if (RELAY) Relay.onstate = function (up) { if (!up) $("mode").textContent = "Connecting to the relay…"; };
   // Her phone lets this iPhone in without a code on your own Wi-Fi / hotspot.
   // Only if she turned "Require a code" on do we ask for one.
   if (code) startViewer();

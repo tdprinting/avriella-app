@@ -92,7 +92,7 @@ Tip: give her phone a fixed IP of `172.20.10.9` on your hotspot (her Wi-Fi setti
 
 - **Remote wake-up:** the iPhone connection now stays on all the time, even when her screen is off. Tap **☀️ Wake her phone** in the Baby Cam app, or just pick a video or sleep sound and her phone wakes up and plays it. On her phone, once: **Manage → Baby cam → allow "Display over other apps" and "Stay connected while asleep"**. Keeping her phone on the charger is best.
 - **Touch lock from the iPhone:** under 🎛️ Her phone, tap **Unlock touch / Lock touch**. Holding both volume buttons on her phone still opens the parent panel as before.
-- **From work (any network):** install the free **Tailscale** app on her phone and your iPhones and sign in to the same account. In Tailscale on her phone, turn on Always-on VPN. Open the Baby Cam app once at home; it remembers her Tailscale address and uses it on its own when you're away.
+- **From anywhere (work, cell data), nothing to install:** open the Baby Cam app once on your home Wi-Fi and it pairs by itself. When you're away, it connects through free public message relays instead. Everything is end-to-end encrypted with a secret only her phone and your paired iPhones have; the relay only sees scrambled data. Away from home the camera shows about 3 pictures a second instead of smooth video. Controls, the baby book and photos all work the same. To revoke: Manage → Baby cam → Unpair all iPhones. (Tailscale still works too if you ever want smooth video from away.)
 
 ## 8. Baby book
 

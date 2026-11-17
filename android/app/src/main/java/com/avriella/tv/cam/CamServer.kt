@@ -26,6 +26,8 @@ import java.util.concurrent.Executors
 object CamState {
     @Volatile var nowPlaying = ""
     @Volatile var mode = "menu"
+    /** Connected to the "from anywhere" relay. */
+    @Volatile var relay = false
     /** null = not on a kid screen; true = touch is locked; false = she can touch. */
     @Volatile var touchLocked: Boolean? = null
     @Volatile var running = false
@@ -135,6 +137,10 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                 // Lets iPhones on the same Wi-Fi recognise this phone when they search for it (no secrets here).
                 "/api/hello" -> send(out, 200, "application/json",
                     JSONObject().put("app", "avriella-tv").put("name", Library.settings.childName).put("port", CamState.port).toString().toByteArray())
+                // Pairing for "from anywhere" mode: only handed out on your own network.
+                "/api/pair" -> if (authed && isLocal(sock.inetAddress) && Library.settings.relaySecret.isNotEmpty())
+                    send(out, 200, "application/json", JSONObject().put("secret", Library.settings.relaySecret).toString().toByteArray())
+                    else denied(out)
                 "/api/info" -> if (authed) send(out, 200, "application/json", info().toByteArray()) else denied(out)
                 "/api/snap" -> if (authed) snap(out) else denied(out)
                 "/api/library" -> if (authed) {
@@ -247,6 +253,7 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("canWake", Wake.canLaunch())
             put("addrs", org.json.JSONArray(Wake.addresses().filter { !it.startsWith("127.") }))
             put("tailscale", Wake.tailscale() ?: "")
+            put("relay", CamState.relay)
         }.toString()
     }
 

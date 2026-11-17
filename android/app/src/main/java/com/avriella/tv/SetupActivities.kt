@@ -125,7 +125,7 @@ class CamSetupActivity : ParentActivity() {
         val s = Library.settings
 
         val intro = card(16)
-        intro.addView(label("Watch ${s.childName} from your iPhone while she watches her shows. The front camera only turns on while one of you is looking. It works on your home Wi-Fi, in the car on your hotspot, and from work with Tailscale. You can even wake her phone and start a video.", 15f, Pal.INK))
+        intro.addView(label("Watch ${s.childName} from your iPhone while she watches her shows. The front camera only turns on while one of you is looking. It works on your home Wi-Fi, in the car on your hotspot, and from anywhere else too. You can even wake her phone and start a video.", 15f, Pal.INK))
         body.addView(intro, lp(t = dp(6)))
 
         val row = hbox().apply { setPadding(dp(16), dp(14), dp(16), dp(14)); background = rounded(Pal.CARD, dpf(18f)) }
@@ -211,16 +211,23 @@ class CamSetupActivity : ParentActivity() {
             addView(label("This works with no cell signal at all. The phones talk directly; nothing goes to the internet. (Bluetooth can't be used, because iPhone web apps aren't allowed to use it.)", 13f, Pal.SUB).apply { setPadding(0, dp(8), 0, 0) })
         }, lp(t = dp(4)))
 
-        body.addView(section("💼  Watching when you're away (at work)"))
-        val ts = com.avriella.tv.cam.Wake.tailscale()
+        body.addView(section("🌍  From anywhere (at work, on cell data)"))
         body.addView(card(16).apply {
-            addView(label("Use the free Tailscale app to reach this phone from anywhere, over cell data or any Wi-Fi. It's a private link between your own phones; nothing is shared with anyone else.", 14f, Pal.SUB))
-            addView(step(1, "Install Tailscale from the Play Store on this phone, and from the App Store on each iPhone."))
-            addView(step(2, "Sign in to the same account on all of them, and turn Tailscale on."))
-            addView(step(3, "On this phone, in Tailscale's settings, turn on \"Always-on VPN\" (or start on boot) so it stays connected."))
-            addView(step(4, "Open the Baby Cam app at home once; it remembers this phone's Tailscale address and uses it by itself when you're away."))
-            addView(label(if (ts != null) "✅ Tailscale is on. Away-from-home address: http://$ts:${CamState.port}" else "Tailscale isn't running on this phone yet.", 14f, if (ts != null) Pal.GREEN else Pal.SUB, true).apply { setPadding(0, dp(10), 0, 0) })
+            addView(label(if (CamState.relay) "✅ Ready. Your paired iPhones can reach this phone from anywhere." else "Connecting to the relay… (needs internet on this phone)", 14f, if (CamState.relay) Pal.GREEN else Pal.SUB, true))
+            addView(label("Nothing to install and no accounts. Open the Baby Cam app once while you're on your home Wi-Fi; it pairs by itself. After that, when you're away it connects through a free relay instead.", 14f, Pal.SUB).apply { setPadding(0, dp(8), 0, 0) })
+            addView(label("Private: everything is locked with a secret key that only this phone and your paired iPhones have (end-to-end encryption). The relay only passes along scrambled data it can't read. Away from home the camera shows about 2 pictures a second instead of smooth video.", 13f, Pal.SUB).apply { setPadding(0, dp(8), 0, 0) })
+            addView(pill("🔐  Unpair all iPhones", Pal.CARD, Pal.INK) {
+                confirm("Unpair all iPhones?", "They'll stop working from away until you open the Baby Cam app on your home Wi-Fi again.", "Unpair") {
+                    s.relaySecret = com.avriella.tv.cam.RelayClient.newSecret(); Library.save()
+                    stopService(Intent(this@CamSetupActivity, CamService::class.java))
+                    body.postDelayed({ com.avriella.tv.App.startCam(this@CamSetupActivity); rebuild() }, 800)
+                }
+            }, lp(MATCH, WRAP, t = dp(10)))
         })
+        val ts = com.avriella.tv.cam.Wake.tailscale()
+        if (ts != null) body.addView(card(16).apply {
+            addView(label("Tailscale is on too: http://$ts:${CamState.port} (smooth video from away).", 13f, Pal.SUB))
+        }, lp(t = dp(8)))
     }
 
     private fun hasCam() = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
