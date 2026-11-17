@@ -27,6 +27,11 @@ object KidLock {
     /** Full lock: we're the device owner, or another device manager (like Test DPC) allowed us into lock task mode. */
     fun isFullLock(ctx: Context): Boolean = isOwner(ctx) || try { dpm(ctx).isLockTaskPermitted(ctx.packageName) } catch (_: Exception) { false }
 
+    /** Package of an installed device-manager app (like Test DPC) that can allow our lock task, or null. */
+    fun testDpc(ctx: Context): String? = listOf("com.afwsamples.testdpc").firstOrNull {
+        try { ctx.packageManager.getLaunchIntentForPackage(it) != null } catch (_: Exception) { false }
+    }
+
     fun isLocked(ctx: Context): Boolean =
         (ctx.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).lockTaskModeState != ActivityManager.LOCK_TASK_MODE_NONE
 

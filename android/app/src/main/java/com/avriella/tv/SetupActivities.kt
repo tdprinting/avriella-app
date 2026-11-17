@@ -87,6 +87,22 @@ class LockSetupActivity : ParentActivity() {
             return
         }
 
+        val dpc = KidLock.testDpc(this)
+        if (dpc != null) {
+            body.addView(section("Turn on Full Lock (one time, ~30 seconds)"))
+            val t = card(16)
+            t.addView(label("Test DPC already manages this phone, so it just needs to allow Avriella TV. This also stops the \"App is pinned – Got it\" popup from appearing on her screen.", 14f, Pal.SUB))
+            t.addView(step(1, "Tap the button below to open Test DPC."))
+            t.addView(step(2, "Scroll to \"Lock task\" and tap \"Manage lock task list\"."))
+            t.addView(step(3, "Tick Avriella TV, then tap OK."))
+            t.addView(step(4, "Come back here – it will say Full lock is ON."))
+            t.addView(pill("Open Test DPC", Pal.BLUE) {
+                try { startActivity(packageManager.getLaunchIntentForPackage(dpc)) } catch (_: Exception) { toast("Couldn't open Test DPC") }
+            }, lp(MATCH, WRAP, t = dp(10)))
+            body.addView(t)
+            return
+        }
+
         body.addView(section("Turn on Full Lock (one time, ~5 minutes)"))
         val c = card(16)
         c.addView(label("Android only allows a full kiosk lock for apps set up from a computer. You do this once:", 14f, Pal.SUB))

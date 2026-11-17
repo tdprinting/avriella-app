@@ -25,7 +25,11 @@ An Android app (built for a Moto G Power) that turns a phone into a locked-down,
 
 ## 2. Turn on Full Lock (recommended, one time)
 
-Without it, the app uses Android's *screen pinning*. That blocks almost everything, but Android's own "unpin" gesture can still get out. Full Lock removes that gesture and also blocks the notification shade and the power menu.
+Without it, the app uses Android's *screen pinning*. That blocks almost everything, but Android's own "unpin" gesture can still get out. Full Lock removes that gesture and also blocks the notification shade and the power menu. It also stops the **"App is pinned – Got it"** popup, which otherwise appears on her screen every time a show starts remotely.
+
+**If Test DPC is already on her phone** (it is the device owner), skip the steps below: open the app's menu, tap **Basic lock**, tap **Open Test DPC**, go to **Lock task → Manage lock task list**, tick **Avriella TV**, then tap OK. It takes about 30 seconds.
+
+Otherwise:
 
 1. Settings → About phone → tap **Build number** 7 times.
 2. Settings → System → Developer options → **USB debugging** on.
@@ -101,6 +105,13 @@ Tap **👶 Baby book** on the parent home screen, or scroll to it in the Baby Ca
 - **Her info:** birthday (Feb 7, 2026, 8:40 AM), doctor, allergies and more, plus her exact age in years, months, days, weeks and hours.
 - **Stats & monthly photos:** the last 7 days at a glance and one photo per month. On the 1st of every month her phone reminds you to take this month's picture. **🎞️ Flip mode** plays all the photos in order, newborn to now, so you can watch her grow.
 - Everything is saved on her phone; nothing goes to the internet.
+
+## 9. Talk to her and video call
+
+In the Baby Cam app, the **💬 Talk to her** card has two buttons.
+- **🎙️ Hold to talk.** Hold the button, or tap once to start and again to send. Her phone plays your voice. Her show or sleep sounds turn down while you talk, then fade back up. Pick a **voice filter** first for fun (chipmunk, monster, robot, alien, echo, radio, underwater, ghost, dino). **🔊 Hear my last one** replays it on your iPhone.
+- **📹 Video call.** Her phone wakes up and pauses whatever she's watching. It shows you full screen with her own picture in the corner, using the loudspeaker. When you hang up, her show or sounds pick up right where they left off. Video calls need the Baby Cam app opened from the web link (https), not the home-Wi-Fi address. Allow the microphone on her phone once when the app asks.
+- The call connects directly between the phones. It usually works from anywhere, but some strict networks (for example some work or hotel Wi-Fi) can block it. Talk still works there.
 
 ## Building
 

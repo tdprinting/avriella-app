@@ -106,6 +106,7 @@ class LevelVideoView(ctx: Context) : FrameLayout(ctx), TextureView.SurfaceTextur
             mp.setOnPreparedListener { p ->
                 if (player !== p) return@setOnPreparedListener
                 prepared = true
+                com.avriella.tv.sleep.Duck.level.let { d -> if (d < 1f) try { p.setVolume(d, d) } catch (_: Exception) {} }
                 onPrepared?.onPrepared(p)
                 if (wantPlay && !p.isPlaying) p.start()
             }
@@ -170,8 +171,10 @@ class LevelVideoView(ctx: Context) : FrameLayout(ctx), TextureView.SurfaceTextur
         listening = false
     }
 
-    override fun onAttachedToWindow() { super.onAttachedToWindow(); if (keepLevel) startSensor() }
-    override fun onDetachedFromWindow() { stopSensor(); super.onDetachedFromWindow() }
+    // a parent's voice turns the show down for a moment
+    private val duckListener: (Float) -> Unit = { d -> try { player?.setVolume(d, d) } catch (_: Exception) {} }
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); if (keepLevel) startSensor(); com.avriella.tv.sleep.Duck.listen(duckListener) }
+    override fun onDetachedFromWindow() { stopSensor(); com.avriella.tv.sleep.Duck.unlisten(duckListener); super.onDetachedFromWindow() }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 

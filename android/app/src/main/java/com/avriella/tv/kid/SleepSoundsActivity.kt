@@ -60,6 +60,12 @@ class SleepSoundsActivity : KidActivity() {
         if (!sleeping) engine.start(soundId)
     }
 
+    // a video call covers this screen: hush the sounds until it's over
+    override fun onPause() {
+        super.onPause()
+        if (com.avriella.tv.cam.CamState.inCall) engine.pause()
+    }
+
     override fun onDestroy() {
         engine.stop()
         CamState.soundId = null

@@ -396,6 +396,7 @@ abstract class KidActivity : Activity() {
                 "ok"
             }
             "wake" -> { wake(); if (panelOpen) rebuildPanel(); "ok" }
+            "talking" -> { showNote("💬  Someone who loves you is talking!"); "ok" }
             // Lock / unlock touch from the iPhone (holding both volume buttons still works too).
             "touch" -> {
                 touchLocked = when (c.value) { "lock" -> true; "unlock" -> false; else -> !touchLocked }

@@ -280,6 +280,31 @@
   .flip-ctl { display: flex; justify-content: center; gap: 8px; }
   .flip-ctl button { min-height: 44px; min-width: 52px; padding: 6px 14px; border-radius: 22px; background: rgba(255,255,255,.18); color: #fff; border: 0; font-size: 18px; }
 </style>
+<style id="talkCss">
+  .talk-row { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; }
+  .talk-btn, .call-btn { min-height: 104px; border-radius: 26px; border: 0; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 10px 6px; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; }
+  .talk-btn { background: linear-gradient(160deg, #ff7aa8, #9b6bff); box-shadow: 0 10px 26px rgba(155,107,255,.45); }
+  .call-btn { background: linear-gradient(160deg, #3fd18c, #1f9f88); box-shadow: 0 10px 26px rgba(31,159,136,.4); }
+  .talk-btn .ic, .call-btn .ic { font-size: 34px; line-height: 1.1; }
+  .talk-btn b, .call-btn b { font-size: 16px; }
+  .talk-btn small, .call-btn small { font-size: 11.5px; opacity: .9; }
+  .talk-btn.rec { background: linear-gradient(160deg, #ff4d6d, #ff8a3d); animation: recpulse 1s ease-in-out infinite; }
+  .talk-btn.busy { opacity: .75; }
+  @keyframes recpulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,77,109,.55); } 50% { box-shadow: 0 0 0 14px rgba(255,77,109,0); } }
+  .fx-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  .fx-grid button { min-height: 58px; padding: 6px 2px; border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; font-size: 10.5px; font-weight: 700; background: rgba(255,255,255,.12); color: inherit; border: 1px solid rgba(255,255,255,.16); }
+  .fx-grid button span { font-size: 22px; line-height: 1.1; }
+  .fx-grid button.on { background: rgba(255,255,255,.34); border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.35); }
+  .callview { position: fixed; inset: 0; z-index: 70; background: #0d0a1c; color: #fff; }
+  .callview.hidden { display: none; }
+  #callThem { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #callMe { position: absolute; right: 14px; top: calc(env(safe-area-inset-top) + 14px); width: 30vw; max-width: 150px; border-radius: 18px; transform: scaleX(-1); border: 2px solid rgba(255,255,255,.8); box-shadow: 0 6px 20px rgba(0,0,0,.5); }
+  .call-status { position: absolute; left: 0; right: 0; top: 40%; text-align: center; font-size: 20px; font-weight: 700; text-shadow: 0 2px 10px rgba(0,0,0,.6); padding: 0 24px; }
+  .call-ctl { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 22px); display: flex; justify-content: center; gap: 14px; }
+  .call-ctl button { min-height: 58px; min-width: 58px; border-radius: 29px; border: 0; background: rgba(255,255,255,.2); color: #fff; font-size: 22px; padding: 0 18px; backdrop-filter: blur(8px); }
+  .call-ctl button.off { background: rgba(255,255,255,.85); color: #222; }
+  .call-ctl .end { background: #ff3b5c; font-size: 17px; font-weight: 700; }
+</style>
 </head>
 <body>
 <div class="blobs"><i></i><i></i><i></i><i></i></div>
@@ -388,16 +413,31 @@
     <button id="mirror"><span>🪞</span>Mirror</button>
     <button id="snap"><span>📸</span>Photo</button>
   </div>
+  <div class="glass card" id="talkCard">
+    <h2>💬 Talk to her</h2>
+    <div class="talk-row">
+      <button class="talk-btn" id="talkBtn"><span class="ic">🎙️</span><b id="talkLabel">Hold to talk</b><small id="talkSub">or tap to start, tap to send</small></button>
+      <button class="call-btn" id="callBtn"><span class="ic">📹</span><b>Video call</b><small>pauses her show</small></button>
+    </div>
+    <div class="ctl-label" style="margin-top:14px"><span>✨ Voice filter</span><b id="fxName">🙂 Normal</b></div>
+    <div class="fx-grid" id="fxGrid"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn-soft" id="hearBtn" disabled>🔊 Hear my last one</button>
+    </div>
+    <p class="muted" id="talkNote" style="margin:8px 0 0;font-size:13px">Her show or sleep sounds turn down while your voice plays, then fade back up.</p>
+  </div>
+
   <div class="glass card" id="ctlCard">
     <h2>🎛️ Her phone</h2>
     <div class="hidden" id="sleepBox" style="margin-bottom:14px">
       <p class="muted" id="sleepMsg" style="margin:0 0 8px">😴 Her screen is off.</p>
-      <button class="wide btn-main" id="wakeBtn">☀️ Wake her phone</button>
+      <button class="wide btn-main" id="screenWakeBtn">☀️ Wake her phone</button>
     </div>
     <div class="hidden" id="touchBox" style="margin-bottom:14px">
       <div class="ctl-label"><span>✋ Touch screen</span><b id="touchVal">–</b></div>
       <button class="wide btn-soft" id="touchBtn">🔓 Unlock touch</button>
       <p class="muted" style="margin:6px 0 0;font-size:13px">Holding both volume buttons on her phone still opens the parent panel too.</p>
+      <p class="muted hidden" id="pinWarn" style="margin:6px 0 0;font-size:13px;color:#ffc98b">⚠️ Her phone may show an "App is pinned – Got it" popup when a show starts. To stop it for good: on her phone open the Avriella TV menu, tap “Basic lock”, then “Open Test DPC” and tick Avriella TV.</p>
     </div>
 
     <div class="ctl-label"><span>🔊 Volume</span><b id="volVal">–</b></div>
@@ -491,6 +531,17 @@
   </div>
 </div>
 <div class="toast hidden" id="toast"></div>
+
+<div class="callview hidden" id="callView">
+  <video id="callThem" autoplay playsinline></video>
+  <video id="callMe" autoplay playsinline muted></video>
+  <div class="call-status" id="callStatus">📞 Calling her phone…</div>
+  <div class="call-ctl">
+    <button id="callMute" aria-label="Mute">🎙️</button>
+    <button id="callCam" aria-label="Camera on or off">📷</button>
+    <button id="callEnd" class="end" aria-label="Hang up">📕 Hang up</button>
+  </div>
+</div>
 <div class="flip hidden" id="flipbook">
   <img id="flipA" alt=""><img id="flipB" alt="" style="opacity:0">
   <div class="flip-top"><b id="flipTitle"></b><small id="flipSub"></small></div>
@@ -1111,6 +1162,250 @@
     fetch(bapi("/photo", "&month=" + m + "&delete=1"), { cache: "no-store" }).then(function () { closeFlip(); loadBaby(); toast("🗑️ Removed"); });
   };
 
+  // ---------- Talk to her (walkie-talkie with voice filters) + video call ----------
+  // iPhones only let secure (https) pages use the microphone and camera, so on the home-Wi-Fi
+  // page (plain http, served by her phone) these buttons hop over to the secure app.
+  var SECURE = !!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  function needSecure(what) {
+    if (SECURE) return false;
+    if (confirm(what + " needs the secure version of the Baby Cam app (iPhones only let secure pages use the microphone). Open it now? Everything works there too.")) {
+      location.href = "https://tdprinting.github.io/avriella-app/docs/#relay";
+    }
+    return true;
+  }
+  var FX = [
+    { id: "normal", e: "🙂", n: "Normal" }, { id: "chipmunk", e: "🐿️", n: "Chipmunk" }, { id: "monster", e: "👹", n: "Monster" },
+    { id: "robot", e: "🤖", n: "Robot" }, { id: "alien", e: "👽", n: "Alien" }, { id: "echo", e: "🏔️", n: "Echo cave" },
+    { id: "radio", e: "📻", n: "Radio" }, { id: "underwater", e: "🐠", n: "Underwater" }, { id: "ghost", e: "👻", n: "Ghost" },
+    { id: "giant", e: "🦕", n: "Dino" }
+  ];
+  var fx = store.get("fx") || "normal", actx = null, rec = null, recStream = null, recChunks = [], recStart = 0, recTimer = null, tapMode = false, lastVoice = null, sending = false;
+  function paintFx() {
+    var f = FX.filter(function (x) { return x.id === fx; })[0] || FX[0];
+    $("fxName").textContent = f.e + " " + f.n;
+    Array.prototype.forEach.call($("fxGrid").children, function (b) { b.classList.toggle("on", b.getAttribute("data-fx") === fx); });
+  }
+  FX.forEach(function (f) {
+    var b = document.createElement("button");
+    b.setAttribute("data-fx", f.id); b.innerHTML = "<span>" + f.e + "</span>" + f.n;
+    b.onclick = function () { fx = f.id; store.set("fx", fx); paintFx(); if (lastVoice) previewWith(fx); };
+    $("fxGrid").appendChild(b);
+  });
+  paintFx();
+  function ac() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === "suspended") actx.resume(); return actx; }
+
+  function curve(k) { var n = 1024, c = new Float32Array(n); for (var i = 0; i < n; i++) { var x = i * 2 / n - 1; c[i] = (1 + k) * x / (1 + k * Math.abs(x)); } return c; }
+  /** Bakes the chosen filter into the recording (offline, so it sounds the same every time). */
+  function render(buf, f) {
+    var rate = { chipmunk: 1.6, monster: 0.72, alien: 1.18, ghost: 0.9, giant: 0.6 }[f] || 1;
+    var tail = { echo: 1.8, ghost: 1.6 }[f] || 0.2;
+    var sr = 16000, len = Math.ceil((buf.duration / rate + tail) * sr);
+    var c = new OfflineAudioContext(1, len, sr);
+    var src = c.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
+    var out = c.createGain(); out.connect(c.destination);
+    function vibrato(input, hz, depth) {
+      var d = c.createDelay(0.1); d.delayTime.value = 0.02;
+      var lfo = c.createOscillator(), lg = c.createGain(); lfo.frequency.value = hz; lg.gain.value = depth;
+      lfo.connect(lg); lg.connect(d.delayTime); lfo.start(); input.connect(d); return d;
+    }
+    function echo(input, time, fb, tone) {
+      var mix = c.createGain(); input.connect(mix);
+      var d = c.createDelay(2), g = c.createGain(), lp = c.createBiquadFilter();
+      d.delayTime.value = time; g.gain.value = fb; lp.type = "lowpass"; lp.frequency.value = tone;
+      input.connect(d); d.connect(lp); lp.connect(g); g.connect(d); lp.connect(mix);
+      return mix;
+    }
+    function ring(input, hz, wet) {
+      var mix = c.createGain(), dry = c.createGain(), mod = c.createGain(), osc = c.createOscillator();
+      dry.gain.value = 1 - wet; mod.gain.value = 0; osc.frequency.value = hz; osc.connect(mod.gain); osc.start();
+      var wg = c.createGain(); wg.gain.value = wet * 1.6;
+      input.connect(dry); input.connect(mod); mod.connect(wg); dry.connect(mix); wg.connect(mix); return mix;
+    }
+    var node = src;
+    if (f === "monster" || f === "giant") {
+      var ls = c.createBiquadFilter(); ls.type = "lowshelf"; ls.frequency.value = 250; ls.gain.value = 9;
+      var ws = c.createWaveShaper(); ws.curve = curve(f === "monster" ? 6 : 2);
+      node.connect(ls); ls.connect(ws); node = ws; out.gain.value = 0.8;
+    } else if (f === "robot") {
+      node = ring(node, 55, 1);
+      var cd = c.createDelay(0.1), cg = c.createGain(); cd.delayTime.value = 0.011; cg.gain.value = 0.55;
+      var mixR = c.createGain(); node.connect(mixR); node.connect(cd); cd.connect(cg); cg.connect(cd); cd.connect(mixR); node = mixR;
+    } else if (f === "alien") {
+      node = vibrato(node, 7, 0.004); node = ring(node, 420, 0.35);
+    } else if (f === "echo") {
+      node = echo(node, 0.28, 0.45, 2600);
+    } else if (f === "radio") {
+      var hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 500;
+      var lp = c.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 3200;
+      var dist = c.createWaveShaper(); dist.curve = curve(18);
+      node.connect(hp); hp.connect(lp); lp.connect(dist); node = dist; out.gain.value = 0.6;
+    } else if (f === "underwater") {
+      var uw = c.createBiquadFilter(); uw.type = "lowpass"; uw.frequency.value = 650; uw.Q.value = 7;
+      node.connect(uw); node = vibrato(uw, 3, 0.006);
+    } else if (f === "ghost") {
+      var gh = c.createBiquadFilter(); gh.type = "highpass"; gh.frequency.value = 300;
+      node.connect(gh); node = vibrato(gh, 4, 0.005); node = echo(node, 0.35, 0.5, 1800);
+    }
+    node.connect(out);
+    src.start();
+    return c.startRendering().then(function (b) {
+      var d = b.getChannelData(0), peak = 0, i;
+      for (i = 0; i < d.length; i++) peak = Math.max(peak, Math.abs(d[i]));
+      if (peak > 0) { var g = 0.9 / peak; for (i = 0; i < d.length; i++) d[i] *= g; }
+      return b;
+    });
+  }
+  function wav(b) {
+    var d = b.getChannelData(0), n = d.length, v = new DataView(new ArrayBuffer(44 + n * 2));
+    function s(o, t) { for (var i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); }
+    s(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); s(8, "WAVE"); s(12, "fmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, b.sampleRate, true); v.setUint32(28, b.sampleRate * 2, true);
+    v.setUint16(32, 2, true); v.setUint16(34, 16, true); s(36, "data"); v.setUint32(40, n * 2, true);
+    for (var i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, d[i])) * 32767, true);
+    return new Blob([v.buffer], { type: "audio/wav" });
+  }
+  function talkUI(state, sub) {
+    var b = $("talkBtn");
+    b.classList.toggle("rec", state === "rec"); b.classList.toggle("busy", state === "busy");
+    $("talkLabel").textContent = state === "rec" ? "Recording… let go to send" : state === "busy" ? "Sending…" : "Hold to talk";
+    if (state === "rec" && tapMode) $("talkLabel").textContent = "Recording… tap to send";
+    $("talkSub").textContent = sub || (state === "idle" ? "or tap to start, tap to send" : "");
+  }
+  function startRec() {
+    if (rec || sending) return;
+    ac();
+    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then(function (st) {
+      recStream = st; recChunks = [];
+      var type = window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported("audio/mp4") ? "audio/mp4" : "";
+      rec = type ? new MediaRecorder(st, { mimeType: type }) : new MediaRecorder(st);
+      rec.ondataavailable = function (e) { if (e.data && e.data.size) recChunks.push(e.data); };
+      rec.onstop = finishRec;
+      rec.start(250);
+      recStart = Date.now();
+      talkUI("rec", "0:00");
+      clearInterval(recTimer);
+      recTimer = setInterval(function () {
+        var s = Math.floor((Date.now() - recStart) / 1000);
+        talkUI("rec", "0:" + ("0" + s).slice(-2) + " of 0:30");
+        if (s >= 30) stopRec();
+      }, 250);
+    }).catch(function () { toast("🎙️ Allow the microphone to talk to her."); tapMode = false; });
+  }
+  function stopRec() {
+    clearInterval(recTimer);
+    if (rec && rec.state !== "inactive") rec.stop();
+  }
+  function finishRec() {
+    var r = rec; rec = null; tapMode = false;
+    if (recStream) { recStream.getTracks().forEach(function (t) { t.stop(); }); recStream = null; }
+    if (Date.now() - recStart < 500) { talkUI("idle"); toast("Hold the button while you talk."); return; }
+    var blob = new Blob(recChunks, { type: r && r.mimeType || "audio/mp4" });
+    sending = true; talkUI("busy");
+    blob.arrayBuffer().then(function (ab) { return ac().decodeAudioData(ab); }).then(function (buf) {
+      lastVoice = buf; $("hearBtn").disabled = false;
+      return render(buf, fx);
+    }).then(function (out) {
+      return fetch("/api/talk?key=" + encodeURIComponent(code || ""), { method: "POST", body: wav(out), headers: { "Content-Type": "audio/wav" } });
+    }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.error) throw new Error(j.error);
+      toast("💬 Playing on her phone");
+    }).catch(function (e) { toast(e.message || "Couldn't send your voice."); })
+      .then(function () { sending = false; talkUI("idle"); });
+  }
+  function previewWith(f) {
+    if (!lastVoice) return;
+    render(lastVoice, f).then(function (b) { var s = ac().createBufferSource(); s.buffer = b; s.connect(ac().destination); s.start(); });
+  }
+  $("hearBtn").onclick = function () { previewWith(fx); };
+  var downAt = 0;
+  $("talkBtn").addEventListener("pointerdown", function (e) {
+    e.preventDefault();
+    if (needSecure("Talking to her")) return;
+    if (rec && tapMode) { stopRec(); return; }  // second tap sends
+    downAt = Date.now(); startRec();
+  });
+  function talkUp() {
+    if (!rec || tapMode) return;
+    if (Date.now() - downAt < 400) { tapMode = true; talkUI("rec", "tap again to send"); return; } // quick tap: keep recording
+    stopRec();
+  }
+  $("talkBtn").addEventListener("pointerup", talkUp);
+  $("talkBtn").addEventListener("pointercancel", talkUp);
+  $("talkBtn").addEventListener("contextmenu", function (e) { e.preventDefault(); });
+
+  // video call
+  var call = null;
+  function callStatus(t) { $("callStatus").textContent = t || ""; $("callStatus").style.display = t ? "" : "none"; }
+  function iceDone(pc, ms) {
+    return new Promise(function (res) {
+      if (pc.iceGatheringState === "complete") return res();
+      var t = setTimeout(res, ms);
+      pc.addEventListener("icegatheringstatechange", function () { if (pc.iceGatheringState === "complete") { clearTimeout(t); res(); } });
+    });
+  }
+  function endCall(tellPhone, msg) {
+    if (!call) return;
+    var c = call; call = null;
+    clearInterval(c.poll);
+    if (tellPhone && c.id) fetch("/api/call/end?key=" + encodeURIComponent(code || "") + "&id=" + c.id).catch(function () {});
+    try { c.local && c.local.getTracks().forEach(function (t) { t.stop(); }); } catch (e) {}
+    try { c.pc && c.pc.close(); } catch (e) {}
+    $("callView").classList.add("hidden");
+    $("callThem").srcObject = null; $("callMe").srcObject = null;
+    if (msg) toast(msg);
+    startStream(); setTimeout(pollInfo, 800);
+  }
+  $("callBtn").onclick = function () {
+    if (needSecure("Video calling")) return;
+    if (call) return;
+    call = { id: "" };
+    var c = call;
+    $("callView").classList.remove("hidden"); callStatus("📞 Calling her phone…");
+    stopStream();
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: { echoCancellation: true, noiseSuppression: true } })
+      .then(function (st) {
+        if (call !== c) { st.getTracks().forEach(function (t) { t.stop(); }); return; }
+        c.local = st; $("callMe").srcObject = st;
+        var pc = c.pc = new RTCPeerConnection({ iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] });
+        st.getTracks().forEach(function (t) { pc.addTrack(t, st); });
+        pc.ontrack = function (e) { if ($("callThem").srcObject !== e.streams[0]) { $("callThem").srcObject = e.streams[0]; $("callThem").play().catch(function () {}); } };
+        pc.onconnectionstatechange = function () {
+          if (call !== c) return;
+          if (pc.connectionState === "connected") callStatus("");
+          if (pc.connectionState === "failed") endCall(true, "Couldn't connect the call. Some networks block direct video; try again on Wi-Fi.");
+          if (pc.connectionState === "disconnected") callStatus("Reconnecting…");
+        };
+        return pc.createOffer().then(function (o) { return pc.setLocalDescription(o); }).then(function () { return iceDone(pc, 4000); }).then(function () {
+          return fetch("/api/call/start?key=" + encodeURIComponent(code || ""), { method: "POST", body: JSON.stringify(pc.localDescription), headers: { "Content-Type": "application/json" } });
+        }).then(function (r) { return r.json(); }).then(function (j) {
+          if (j.error) throw new Error(j.error);
+          if (call !== c) { fetch("/api/call/end?key=" + encodeURIComponent(code || "") + "&id=" + j.id); return; }
+          c.id = j.id; callStatus("📞 Ringing…");
+          var answered = false, busy = false;
+          c.poll = setInterval(function () {
+            if (busy || call !== c) return; busy = true;
+            fetch("/api/call/state?key=" + encodeURIComponent(code || "") + "&id=" + c.id, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (s) {
+              if (call !== c) return;
+              if (s.state === "ended") { endCall(false, "📕 Call ended"); return; }
+              if (s.answer && !answered) { answered = true; callStatus("Connecting…"); return pc.setRemoteDescription(JSON.parse(s.answer)); }
+            }).catch(function () {}).then(function () { busy = false; });
+          }, answered ? 2000 : 800);
+        });
+      })
+      .catch(function (e) { endCall(true, e && e.message && e.message.indexOf("Permission") < 0 ? e.message : "Allow the camera and microphone to video call."); });
+  };
+  $("callEnd").onclick = function () { endCall(true, "📕 Call ended"); };
+  $("callMute").onclick = function () {
+    if (!call || !call.local) return;
+    var t = call.local.getAudioTracks()[0]; if (!t) return;
+    t.enabled = !t.enabled; this.classList.toggle("off", !t.enabled); this.textContent = t.enabled ? "🎙️" : "🔇";
+  };
+  $("callCam").onclick = function () {
+    if (!call || !call.local) return;
+    var t = call.local.getVideoTracks()[0]; if (!t) return;
+    t.enabled = !t.enabled; this.classList.toggle("off", !t.enabled);
+  };
+
   // ---------- Touch lock ----------
   var touchLocked = null, touchSentAt = 0;
   function paintTouch() {
@@ -1119,6 +1414,7 @@
   }
   function updateTouch(j) {
     $("touchBox").classList.toggle("hidden", !j.touch);
+    $("pinWarn").classList.toggle("hidden", j.fullLock !== false);
     if (!j.touch || Date.now() - touchSentAt < 2500) return;
     touchLocked = j.touch === "locked"; paintTouch();
   }
@@ -1140,11 +1436,11 @@
     wasAsleep = asleep;
   }
   var wasAsleep = false;
-  $("wakeBtn").onclick = function () {
-    $("wakeBtn").disabled = true; $("wakeBtn").textContent = "☀️ Waking…";
+  $("screenWakeBtn").onclick = function () {
+    $("screenWakeBtn").disabled = true; $("screenWakeBtn").textContent = "☀️ Waking…";
     control("wake").then(function () { toast("☀️ Her phone is awake"); })
       .catch(function (e) { toast(e.message); })
-      .then(function () { $("wakeBtn").disabled = false; $("wakeBtn").textContent = "☀️ Wake her phone"; });
+      .then(function () { $("screenWakeBtn").disabled = false; $("screenWakeBtn").textContent = "☀️ Wake her phone"; });
   };
 
   // ---------- Remember every way to reach her phone (incl. Tailscale for when you're away) ----------

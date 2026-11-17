@@ -56,13 +56,21 @@ class FrontCamera(private val ctx: Context) {
     private var lastFrame = 0L
     private val closeLater = Runnable { closeCamera() }
 
+    init { instance = this }
+    companion object { @Volatile var instance: FrontCamera? = null }
+
+    /** A video call needs the camera: let go of it right away (and don't reopen until the call ends). */
+    fun pauseForCall() { ensureThread(); handler?.removeCallbacks(closeLater); handler?.post { closeCamera() } }
+    // give the call screen a moment to let go of the camera first
+    fun resumeAfterCall() { ensureThread(); handler?.postDelayed({ if (viewers > 0 && device == null && !CamState.inCall) openCamera() }, 2500) }
+
     fun acquire() {
         synchronized(this) {
             viewers++
             CamState.viewers = viewers
             ensureThread()
             handler?.removeCallbacks(closeLater)
-            if (device == null) handler?.post { openCamera() }
+            if (device == null && !CamState.inCall) handler?.post { openCamera() }
         }
     }
 
@@ -89,7 +97,16 @@ class FrontCamera(private val ctx: Context) {
 
     private fun ensureThread() {
         if (thread == null) {
-            thread = HandlerThread("babycam").apply { start() }
+            thread = HandlerThread("babycam").apply {
+                // a camera hiccup must never close her show: log it and start a fresh camera thread next time
+                setUncaughtExceptionHandler { _, e ->
+                    Log.w("FrontCamera", "camera thread error", e)
+                    error = "Camera hiccup – trying again…"
+                    device = null; session = null; reader = null
+                    thread = null; handler = null
+                }
+                start()
+            }
             handler = Handler(thread!!.looper)
         }
     }
@@ -99,7 +116,7 @@ class FrontCamera(private val ctx: Context) {
         if (ctx.checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             error = "Camera isn't allowed on her phone yet. Open Avriella TV there and tap Allow."; return
         }
-        if (device != null) return
+        if (device != null || CamState.inCall) return
         try {
             val mgr = ctx.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             val want = if (useBack) CameraCharacteristics.LENS_FACING_BACK else CameraCharacteristics.LENS_FACING_FRONT
@@ -128,8 +145,11 @@ class FrontCamera(private val ctx: Context) {
             reader = r
             mgr.openCamera(id, object : CameraDevice.StateCallback() {
                 override fun onOpened(cd: CameraDevice) {
+                    // A video call (or another app) may grab the camera at any moment: never let that crash the app.
+                    if (CamState.inCall) { try { cd.close() } catch (_: Exception) {}; return }
                     device = cd
                     error = null
+                    try {
                     @Suppress("DEPRECATION")
                     cd.createCaptureSession(listOf(r.surface), object : CameraCaptureSession.StateCallback() {
                         override fun onConfigured(s: CameraCaptureSession) {
@@ -141,6 +161,12 @@ class FrontCamera(private val ctx: Context) {
                         }
                         override fun onConfigureFailed(s: CameraCaptureSession) { error = "Camera could not start" }
                     }, handler)
+                    } catch (e: Exception) {
+                        Log.w("FrontCamera", "camera taken while starting", e)
+                        try { cd.close() } catch (_: Exception) {}
+                        device = null; error = "Camera is busy – trying again…"
+                        handler?.postDelayed({ if (viewers > 0 && device == null) openCamera() }, 3000)
+                    }
                 }
                 override fun onDisconnected(cd: CameraDevice) { cd.close(); device = null; error = "Camera was taken by another app" }
                 override fun onError(cd: CameraDevice, e: Int) { cd.close(); device = null; error = "Camera error $e" }

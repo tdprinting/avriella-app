@@ -121,6 +121,7 @@ class SoundscapeEngine(ctx: Context) {
         var gain = 0f
         var switchGain = 1f
         while (running) {
+            val duck = com.avriella.tv.sleep.Duck.level
             for (i in 0 until frames) {
                 // cross-fade when a new sound is picked
                 val p = pendingId
@@ -131,7 +132,7 @@ class SoundscapeEngine(ctx: Context) {
                 val tg = target
                 gain = if (gain < tg) (gain + fadePerSample).coerceAtMost(tg) else (gain - fadePerSample).coerceAtLeast(tg)
                 gen()
-                val g = gain * switchGain * 0.9f
+                val g = gain * switchGain * 0.9f * duck
                 buf[i * 2] = (clip(outL * g) * 32000).toInt().toShort()
                 buf[i * 2 + 1] = (clip(outR * g) * 32000).toInt().toShort()
             }

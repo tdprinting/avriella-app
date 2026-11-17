@@ -28,6 +28,8 @@ object CamState {
     @Volatile var mode = "menu"
     /** Connected to the "from anywhere" relay. */
     @Volatile var relay = false
+    @Volatile var talking = false
+    @Volatile var inCall = false
     /** null = not on a kid screen; true = touch is locked; false = she can touch. */
     @Volatile var touchLocked: Boolean? = null
     @Volatile var running = false
@@ -155,6 +157,33 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     send(out, 200, "application/json", body.toString().toByteArray())
                 } else denied(out)
                 "/api/stream" -> if (authed) stream(sock, out) else denied(out)
+                // ---- walkie-talkie: a parent's voice message, played out loud ----
+                "/api/talk" -> if (authed) {
+                    val ok = parts[0] == "POST" && contentLength in 100..(8 * 1024 * 1024) && run {
+                        val body = ByteArray(contentLength); var got = 0
+                        while (got < contentLength) { val r = input.read(body, got, contentLength - got); if (r < 0) break; got += r }
+                        got == contentLength && Talk.play(body)
+                    }
+                    send(out, 200, "application/json", (if (ok) "{\"ok\":true}" else "{\"error\":\"Couldn't play that.\"}").toByteArray())
+                } else denied(out)
+                // ---- video call (WebRTC; the phones then talk to each other directly) ----
+                "/api/call/start" -> if (authed) {
+                    val body = if (parts[0] == "POST" && contentLength in 1..200_000) {
+                        val b = ByteArray(contentLength); var got = 0
+                        while (got < contentLength) { val r = input.read(b, got, contentLength - got); if (r < 0) break; got += r }
+                        String(b, 0, got, Charsets.UTF_8)
+                    } else ""
+                    val res = if (body.isEmpty()) "Missing call details." else Call.start(body)
+                    send(out, 200, "application/json", (if (res.startsWith("id:")) JSONObject().put("ok", true).put("id", res.drop(3)) else JSONObject().put("error", res)).toString().toByteArray())
+                } else denied(out)
+                "/api/call/state" -> if (authed) {
+                    val j = JSONObject().put("state", if (query["id"] == Call.id) Call.state else "ended").put("answer", if (query["id"] == Call.id) Call.answer else "")
+                    send(out, 200, "application/json", j.toString().toByteArray())
+                } else denied(out)
+                "/api/call/end" -> if (authed) {
+                    if (query["id"] == null || query["id"] == Call.id) Call.end()
+                    send(out, 200, "application/json", "{\"ok\":true}".toByteArray())
+                } else denied(out)
                 // ---- baby book: log, her info, monthly growth photos ----
                 "/api/baby" -> if (authed) send(out, 200, "application/json", com.avriella.tv.data.Baby.json().toByteArray()) else denied(out)
                 "/api/baby/log" -> if (authed) {
@@ -249,11 +278,14 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("viewers", CamState.viewers)
             put("error", cam.error ?: "")
             put("awake", Wake.screenOn)
+            put("fullLock", com.avriella.tv.kid.KidLock.isFullLock(Library.appCtx))
             put("touch", when (CamState.touchLocked) { true -> "locked"; false -> "unlocked"; null -> "" })
             put("canWake", Wake.canLaunch())
             put("addrs", org.json.JSONArray(Wake.addresses().filter { !it.startsWith("127.") }))
             put("tailscale", Wake.tailscale() ?: "")
             put("relay", CamState.relay)
+            put("talking", CamState.talking)
+            put("call", Call.state)
         }.toString()
     }
 

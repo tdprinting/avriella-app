@@ -23,8 +23,13 @@ class MelodyPlayer(private val ctx: Context) {
 
     val isPlaying get() = player != null && target > 0f
 
+    // a parent's voice dips the melody down and back up
+    private val duckListener: (Float) -> Unit = { d -> player?.let { val v = volume * volume * d; try { it.setVolume(v, v) } catch (_: Exception) {} } }
+
+
     /** Starts (or keeps playing) a melody, fading it in. */
     fun play(raw: Int, fadeSec: Float = 1.5f) {
+        Duck.unlisten(duckListener); Duck.listen(duckListener)
         if (raw != rawId || player == null) {
             release()
             val mp = MediaPlayer.create(ctx, raw, AudioAttributes.Builder()
@@ -52,6 +57,7 @@ class MelodyPlayer(private val ctx: Context) {
     fun resume() = fade(1f, 1.5f)
 
     fun stop() {
+        Duck.unlisten(duckListener)
         ui.removeCallbacks(tick)
         release()
     }
@@ -68,7 +74,7 @@ class MelodyPlayer(private val ctx: Context) {
             val p = player ?: return
             volume = if (volume < target) (volume + step).coerceAtMost(target) else (volume - step).coerceAtLeast(target)
             // squared curve sounds like an even fade to the ear
-            val v = volume * volume
+            val v = volume * volume * Duck.level
             try { p.setVolume(v, v) } catch (_: Exception) {}
             if (volume == target) {
                 if (target == 0f) try { if (p.isPlaying) p.pause() } catch (_: Exception) {}

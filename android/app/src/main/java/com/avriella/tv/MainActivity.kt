@@ -85,6 +85,7 @@ class MainActivity : ParentActivity() {
 
     private var askedCamera = false
     private var askedNotify = false
+    private var askedMic = false
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -108,6 +109,10 @@ class MainActivity : ParentActivity() {
             askedCamera = true
             toast("Allow the camera (choose \"While using the app\") so you can watch from your iPhone.")
             requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 41)
+        } else if (!askedMic && checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            askedMic = true
+            toast("Allow the microphone so you can video call her from your iPhone.")
+            requestPermissions(arrayOf(android.Manifest.permission.RECORD_AUDIO), 43)
         } else if (!askedNotify && android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
             askedNotify = true
