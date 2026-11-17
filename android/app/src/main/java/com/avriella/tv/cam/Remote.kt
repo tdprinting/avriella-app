@@ -57,6 +57,34 @@ object Remote {
                 "ok"
             } ?: "Her phone didn't answer."
         }
+        if (cmd.action == "wake") {
+            // Turn the screen on, then also wake her up from the sleep screen if it's showing.
+            if (!Wake.wakeAndWait()) return wakeHelp()
+            onMain { if (Wake.kidScreenAlive()) handler?.invoke(cmd); true }
+            return "ok"
+        }
+        if (!Wake.ready()) {
+            // Her phone is asleep (or the app isn't in front): wake it up first, then do the command.
+            android.util.Log.i("AvriellaRemote", "waking her phone for " + cmd.action)
+            val launch = (cmd.action == "play" && cmd.videoId != null && Library.videos.containsKey(cmd.videoId)) || cmd.action == "sounds"
+            if (launch && !Wake.kidScreenAlive()) {
+                // Open the video / sounds straight away; kid screens turn the screen on by themselves.
+                onMain {
+                    Wake.wakeNow()
+                    if (cmd.action == "play") com.avriella.tv.kid.PlayerActivity.start(Library.appCtx, cmd.shelfId, cmd.videoId)
+                    else com.avriella.tv.kid.SleepSoundsActivity.start(Library.appCtx, cmd.value)
+                    true
+                }
+                val until = System.currentTimeMillis() + 5000
+                while (System.currentTimeMillis() < until && !Wake.ready()) Thread.sleep(100)
+                return if (Wake.ready()) "ok" else wakeHelp()
+            }
+            if (!Wake.wakeAndWait()) return wakeHelp()
+        }
         return onMain { handler?.invoke(cmd) ?: "Her phone isn't playing a show or game right now." } ?: "Her phone didn't answer."
     }
+
+    private fun wakeHelp() =
+        if (!Wake.canLaunch()) "Her phone is asleep. To wake it from here, turn on \"Display over other apps\" on her phone: Manage → Baby cam."
+        else "Her phone didn't wake up — try again in a moment."
 }

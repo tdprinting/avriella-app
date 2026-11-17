@@ -18,31 +18,30 @@ abstract class ParentActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val root = vbox().apply {
-            // soft rainbow wash behind the frosted cards
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                intArrayOf(0xFFFFE1EF.toInt(), 0xFFFFF1D6.toInt(), 0xFFE4E6FF.toInt(), 0xFFD9F2FF.toInt()),
-            )
-        }
-        window.statusBarColor = 0xFFFFE1EF.toInt()
-        window.navigationBarColor = 0xFFD9F2FF.toInt()
-        val bar = hbox().apply { setPadding(dp(8), dp(12), dp(12), dp(6)) }
+        // soft pastel wash with a few color blooms behind the cards
+        val root = vbox().apply { background = WashDrawable(); clipChildren = false }
+        window.statusBarColor = 0xFFFFEAF3.toInt()
+        window.navigationBarColor = 0xFFE3F3FF.toInt()
+        val bar = hbox().apply { setPadding(dp(14), dp(14), dp(14), dp(10)); clipChildren = false; clipToPadding = false }
         if (hasBack) {
-            bar.addView(label("←", 26f, Pal.INK, true).apply {
+            bar.addView(label("←", 22f, Pal.INK, true).apply {
                 gravity = Gravity.CENTER
+                includeFontPadding = false
+                contentDescription = "Back"
                 val r = dpf(24f)
-                background = pressable(rounded(0, r), r)
+                background = pressable(rounded(Pal.CARD, r, dp(1), Pal.LINE), r)
+                lift(dpf(2f))
+                pressScale(0.92f)
                 setOnClickListener { finish() }
-            }, lp(dp(48), dp(48)))
+            }, lp(dp(46), dp(46), r = dp(8)))
         }
-        titleView = label("", 24f, Pal.INK, true, 1).apply { setPadding(dp(if (hasBack) 4 else 12), 0, dp(8), 0) }
+        titleView = label("", 25f, Pal.INK, true, 1).apply { setPadding(dp(if (hasBack) 4 else 6), 0, dp(8), 0) }
         bar.addView(titleView, lp(0, WRAP, 1f))
         actions = hbox()
         bar.addView(actions, lp(WRAP, WRAP))
         root.addView(bar, lp())
         scroll = ScrollView(this).apply { isFillViewport = true; clipToPadding = false }
-        body = vbox().apply { setPadding(dp(16), dp(4), dp(16), dp(40)) }
+        body = vbox().apply { setPadding(dp(18), dp(4), dp(18), dp(48)); clipChildren = false; clipToPadding = false }
         scroll.addView(body, FrameLayout.LayoutParams(MATCH, WRAP))
         root.addView(scroll, lp(MATCH, 0, 1f))
         setContentView(root)
@@ -52,9 +51,19 @@ abstract class ParentActivity : Activity() {
         actions.addView(outlinePill(text, Pal.INK, 14f, onClick), lp(WRAP, WRAP, l = dp(6)))
     }
 
+    private var entered = false
+
     override fun onResume() {
         super.onResume()
         rebuild()
+        if (!entered) {
+            // the first time the screen opens, let the content drift up into place
+            entered = true
+            body.alpha = 0f
+            body.translationY = dpf(14f)
+            body.animate().alpha(1f).translationY(0f).setDuration(280)
+                .setInterpolator(android.view.animation.DecelerateInterpolator()).start()
+        }
     }
 
     fun rebuild() {

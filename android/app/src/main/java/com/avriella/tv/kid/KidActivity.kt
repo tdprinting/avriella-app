@@ -53,6 +53,7 @@ abstract class KidActivity : Activity() {
     private lateinit var countdown: TextView
     protected val ui = Handler(Looper.getMainLooper())
     protected var touchLocked = true
+        set(v) { field = v; CamState.touchLocked = v }
     protected var panelOpen = false
         private set
     protected var sleeping = false
@@ -175,6 +176,18 @@ abstract class KidActivity : Activity() {
             return true
         }
         return super.dispatchTouchEvent(ev)
+    }
+
+    /** Shows a short message in the corner for a couple of seconds. */
+    private fun showNote(text: String) {
+        hint.text = text
+        hint.animate().cancel()
+        hint.alpha = 0f
+        hint.animate().alpha(1f).setDuration(250).withEndAction {
+            hint.animate().alpha(0f).setStartDelay(1800).setDuration(500).withEndAction {
+                hint.text = "🔒  Hold both volume buttons to unlock"
+            }.start()
+        }.start()
     }
 
     private fun flashHint() {
@@ -383,6 +396,13 @@ abstract class KidActivity : Activity() {
                 "ok"
             }
             "wake" -> { wake(); if (panelOpen) rebuildPanel(); "ok" }
+            // Lock / unlock touch from the iPhone (holding both volume buttons still works too).
+            "touch" -> {
+                touchLocked = when (c.value) { "lock" -> true; "unlock" -> false; else -> !touchLocked }
+                showNote(if (touchLocked) "🔒  Touch locked" else "👆  Touch is on")
+                if (panelOpen) rebuildPanel()
+                "ok"
+            }
             else -> onRemote(c)
         }
     }
@@ -395,6 +415,7 @@ abstract class KidActivity : Activity() {
 
     private fun stopCam() {
         CamState.mode = "menu"
+        CamState.touchLocked = null
         CamState.nowPlaying = ""
         CamState.sleepAt = 0
         CamState.stopAfter = false

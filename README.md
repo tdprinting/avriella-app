@@ -88,6 +88,20 @@ On the parent home screen, the **😴 Sleep sounds** tiles start calm sounds wit
 
 Tip: give her phone a fixed IP of `172.20.10.9` on your hotspot (her Wi-Fi settings → your hotspot → IP settings: Static, gateway `172.20.10.1`, prefix 28) so it never changes. The phones talk directly, so this works with no cell signal. The iPhone app also opens offline once it has been opened online one time. Bluetooth isn't possible, because iPhone web apps can't use it.
 
+## 7. Wake her phone, and watching from work
+
+- **Remote wake-up:** the iPhone connection now stays on all the time, even when her screen is off. Tap **☀️ Wake her phone** in the Baby Cam app, or just pick a video or sleep sound and her phone wakes up and plays it. On her phone, once: **Manage → Baby cam → allow "Display over other apps" and "Stay connected while asleep"**. Keeping her phone on the charger is best.
+- **Touch lock from the iPhone:** under 🎛️ Her phone, tap **Unlock touch / Lock touch**. Holding both volume buttons on her phone still opens the parent panel as before.
+- **From work (any network):** install the free **Tailscale** app on her phone and your iPhones and sign in to the same account. In Tailscale on her phone, turn on Always-on VPN. Open the Baby Cam app once at home; it remembers her Tailscale address and uses it on its own when you're away.
+
+## 8. Baby book
+
+Tap **👶 Baby book** on the parent home screen, or scroll to it in the Baby Cam app on your iPhone.
+- **Log** baths, feedings, diapers, naps, medicine, measurements, milestones and notes with one tap. You can add a note and change the time.
+- **Her info:** birthday (Feb 7, 2026, 8:40 AM), doctor, allergies and more, plus her exact age in years, months, days, weeks and hours.
+- **Stats & monthly photos:** the last 7 days at a glance and one photo per month. On the 1st of every month her phone reminds you to take this month's picture. **🎞️ Flip mode** plays all the photos in order, newborn to now, so you can watch her grow.
+- Everything is saved on her phone; nothing goes to the internet.
+
 ## Building
 
 ```

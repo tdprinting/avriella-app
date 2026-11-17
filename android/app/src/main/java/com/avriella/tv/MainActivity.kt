@@ -36,30 +36,35 @@ import com.avriella.tv.ui.toast
 import com.avriella.tv.ui.vbox
 
 class App : Application() {
-    private var visible = 0
-    private val ui = android.os.Handler(android.os.Looper.getMainLooper())
-    private val stopCam = Runnable { if (visible == 0) stopService(Intent(this, com.avriella.tv.cam.CamService::class.java)) }
-
     override fun onCreate() {
         super.onCreate()
         Library.init(this)
         Thread { Sounds.init(this) }.start()
-        // The iPhone connection stays up whenever any Avriella TV screen is showing (menu included),
-        // and shuts down a little after the app leaves the screen.
+        try { PhotoReminder.schedule(this) } catch (e: Exception) { android.util.Log.w("AvriellaBaby", "couldn't schedule photo reminder", e) }
+        // The iPhone connection stays up all the time (screen off and asleep too), so parents can
+        // check in and wake her phone up from anywhere. It only stops if they turn it off.
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
-            override fun onActivityStarted(a: android.app.Activity) { visible++; ui.removeCallbacks(stopCam); startCam(a) }
-            override fun onActivityStopped(a: android.app.Activity) { visible--; if (visible <= 0) { visible = 0; ui.postDelayed(stopCam, 120_000) } }
+            override fun onActivityStarted(a: android.app.Activity) { startCam(a) }
+            override fun onActivityStopped(a: android.app.Activity) {}
             override fun onActivityCreated(a: android.app.Activity, b: android.os.Bundle?) {}
-            override fun onActivityResumed(a: android.app.Activity) { ui.removeCallbacks(stopCam); startCam(a) }
-            override fun onActivityPaused(a: android.app.Activity) {}
+            override fun onActivityResumed(a: android.app.Activity) {
+                com.avriella.tv.cam.Wake.top = java.lang.ref.WeakReference(a)
+                com.avriella.tv.cam.Wake.topResumed = true
+                startCam(a)
+            }
+            override fun onActivityPaused(a: android.app.Activity) {
+                if (com.avriella.tv.cam.Wake.top?.get() === a) com.avriella.tv.cam.Wake.topResumed = false
+            }
             override fun onActivitySaveInstanceState(a: android.app.Activity, b: android.os.Bundle) {}
-            override fun onActivityDestroyed(a: android.app.Activity) {}
+            override fun onActivityDestroyed(a: android.app.Activity) {
+                if (com.avriella.tv.cam.Wake.top?.get() === a) com.avriella.tv.cam.Wake.top = null
+            }
         })
     }
 
     companion object {
         /** Starts the iPhone connection (web server + camera on demand) if the parents turned it on. */
-        fun startCam(a: android.app.Activity) {
+        fun startCam(a: android.content.Context) {
             if (!Library.settings.camEnabled) { android.util.Log.i("AvriellaCam", "iPhone connection is turned off in settings"); return }
             try { a.startForegroundService(Intent(a, com.avriella.tv.cam.CamService::class.java)) } catch (e: Exception) {
                 android.util.Log.w("AvriellaCam", "couldn't start cam service", e)
@@ -74,10 +79,12 @@ class MainActivity : ParentActivity() {
 
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
+        addAction("👶 Baby book") { startActivity(Intent(this, BabyActivity::class.java)) }
         addAction("⚙️ Manage") { startActivity(Intent(this, ManageActivity::class.java)) }
     }
 
     private var askedCamera = false
+    private var askedNotify = false
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
@@ -101,6 +108,11 @@ class MainActivity : ParentActivity() {
             askedCamera = true
             toast("Allow the camera (choose \"While using the app\") so you can watch from your iPhone.")
             requestPermissions(arrayOf(android.Manifest.permission.CAMERA), 41)
+        } else if (!askedNotify && android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            askedNotify = true
+            toast("Allow notifications so the app can remind you to take her monthly photo.")
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 42)
         }
     }
 

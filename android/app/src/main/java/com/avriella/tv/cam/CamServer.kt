@@ -26,6 +26,8 @@ import java.util.concurrent.Executors
 object CamState {
     @Volatile var nowPlaying = ""
     @Volatile var mode = "menu"
+    /** null = not on a kid screen; true = touch is locked; false = she can touch. */
+    @Volatile var touchLocked: Boolean? = null
     @Volatile var running = false
     @Volatile var port = 8080
     @Volatile var viewers = 0
@@ -108,7 +110,11 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             sock.tcpNoDelay = true
             val input = BufferedInputStream(sock.getInputStream())
             val line = readLine(input) ?: return
-            while (true) { val h = readLine(input) ?: break; if (h.isEmpty()) break }
+            var contentLength = 0
+            while (true) {
+                val h = readLine(input) ?: break; if (h.isEmpty()) break
+                if (h.startsWith("content-length:", ignoreCase = true)) contentLength = h.substringAfter(':').trim().toIntOrNull() ?: 0
+            }
             val parts = line.split(" ")
             if (parts.size < 2) return
             val full = parts[1]
@@ -143,6 +149,48 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     send(out, 200, "application/json", body.toString().toByteArray())
                 } else denied(out)
                 "/api/stream" -> if (authed) stream(sock, out) else denied(out)
+                // ---- baby book: log, her info, monthly growth photos ----
+                "/api/baby" -> if (authed) send(out, 200, "application/json", com.avriella.tv.data.Baby.json().toByteArray()) else denied(out)
+                "/api/baby/log" -> if (authed) {
+                    val kind = query["kind"] ?: "note"
+                    val time = query["time"]?.toLongOrNull() ?: System.currentTimeMillis()
+                    val e = com.avriella.tv.data.Baby.add(kind, time, query["note"] ?: "", query["by"] ?: "iPhone")
+                    send(out, 200, "application/json", JSONObject().put("ok", true).put("id", e.id).toString().toByteArray())
+                } else denied(out)
+                "/api/baby/edit" -> if (authed) {
+                    com.avriella.tv.data.Baby.update(query["id"] ?: "", query["note"], query["time"]?.toLongOrNull())
+                    send(out, 200, "application/json", "{\"ok\":true}".toByteArray())
+                } else denied(out)
+                "/api/baby/delete" -> if (authed) {
+                    com.avriella.tv.data.Baby.delete(query["id"] ?: "")
+                    send(out, 200, "application/json", "{\"ok\":true}".toByteArray())
+                } else denied(out)
+                "/api/baby/info" -> if (authed) {
+                    val b = com.avriella.tv.data.Baby
+                    synchronized(b) {
+                        b.ensure()
+                        query["field"]?.let { f -> if (f.isNotBlank()) b.info.fields[f.take(40)] = (query["value"] ?: "").take(500) }
+                        query["birth"]?.toLongOrNull()?.let { b.info.birth = it }
+                        b.save()
+                    }
+                    send(out, 200, "application/json", "{\"ok\":true}".toByteArray())
+                } else denied(out)
+                "/api/baby/photo" -> if (authed) {
+                    val m = query["month"]?.toIntOrNull()?.coerceIn(0, 240)
+                    val f = m?.let { com.avriella.tv.data.Baby.photoFile(it) }
+                    when {
+                        m == null -> send(out, 404, "text/plain", "Not found".toByteArray())
+                        parts[0] == "POST" && contentLength in 1..(25 * 1024 * 1024) -> {
+                            val body = ByteArray(contentLength); var got = 0
+                            while (got < contentLength) { val r = input.read(body, got, contentLength - got); if (r < 0) break; got += r }
+                            val ok = got == contentLength && com.avriella.tv.data.Baby.savePhoto(m, body)
+                            send(out, 200, "application/json", (if (ok) "{\"ok\":true}" else "{\"error\":\"Couldn't save that photo.\"}").toByteArray())
+                        }
+                        query["delete"] == "1" -> { com.avriella.tv.data.Baby.deletePhoto(m); send(out, 200, "application/json", "{\"ok\":true}".toByteArray()) }
+                        f != null && f.exists() -> send(out, 200, "image/jpeg", f.readBytes())
+                        else -> send(out, 404, "text/plain", "Not found".toByteArray())
+                    }
+                } else denied(out)
                 else -> send(out, 404, "text/plain", "Not found".toByteArray())
             }
         } catch (e: Exception) {
@@ -194,6 +242,11 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("soundId", CamState.soundId ?: "")
             put("viewers", CamState.viewers)
             put("error", cam.error ?: "")
+            put("awake", Wake.screenOn)
+            put("touch", when (CamState.touchLocked) { true -> "locked"; false -> "unlocked"; null -> "" })
+            put("canWake", Wake.canLaunch())
+            put("addrs", org.json.JSONArray(Wake.addresses().filter { !it.startsWith("127.") }))
+            put("tailscale", Wake.tailscale() ?: "")
         }.toString()
     }
 

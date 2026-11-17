@@ -24,7 +24,8 @@ import com.avriella.tv.ui.pill
 class SleepSoundsActivity : KidActivity() {
     companion object {
         fun start(ctx: Context, soundId: String?) =
-            ctx.startActivity(Intent(ctx, SleepSoundsActivity::class.java).putExtra("sound", soundId))
+            ctx.startActivity(Intent(ctx, SleepSoundsActivity::class.java).putExtra("sound", soundId)
+                .apply { if (ctx !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) })
 
         /** Turns any intent into a sleep-sounds switch from another kid screen (same locked task). */
         fun switchFrom(a: KidActivity, soundId: String?) { start(a, soundId); a.finish() }

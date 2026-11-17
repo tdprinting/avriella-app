@@ -38,6 +38,7 @@ class PlayerActivity : KidActivity() {
                     .putExtra("shelf", shelfId ?: Library.ALL)
                     .putExtra("video", videoId)
                     .putExtra("shuffle", shuffle)
+                    .apply { if (ctx !is android.app.Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK) }
             )
         }
     }

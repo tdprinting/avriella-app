@@ -125,7 +125,7 @@ class CamSetupActivity : ParentActivity() {
         val s = Library.settings
 
         val intro = card(16)
-        intro.addView(label("Watch ${s.childName} from your iPhone while she watches her shows. The front camera only turns on while one of you is looking, and only on your home Wi-Fi. Nothing goes to the internet.", 15f, Pal.INK))
+        intro.addView(label("Watch ${s.childName} from your iPhone while she watches her shows. The front camera only turns on while one of you is looking. It works on your home Wi-Fi, in the car on your hotspot, and from work with Tailscale. You can even wake her phone and start a video.", 15f, Pal.INK))
         body.addView(intro, lp(t = dp(6)))
 
         val row = hbox().apply { setPadding(dp(16), dp(14), dp(16), dp(14)); background = rounded(Pal.CARD, dpf(18f)) }
@@ -137,7 +137,9 @@ class CamSetupActivity : ParentActivity() {
             isChecked = s.camEnabled
             setOnCheckedChangeListener { _, on ->
                 if (on && !hasCam()) { isChecked = false; askPermissions(); return@setOnCheckedChangeListener }
-                s.camEnabled = on; Library.save(); rebuild()
+                s.camEnabled = on; Library.save()
+                if (on) com.avriella.tv.App.startCam(this@CamSetupActivity) else stopService(Intent(this@CamSetupActivity, CamService::class.java))
+                body.postDelayed({ rebuild() }, 600)
             }
         })
         body.addView(row, lp(t = dp(10)))
@@ -170,15 +172,24 @@ class CamSetupActivity : ParentActivity() {
         c.addView(pill("Copy address", Pal.CARD, Pal.INK) { addrs.firstOrNull()?.let { copy("http://$it:$port") } }, lp(WRAP, WRAP, t = dp(6)))
         body.addView(c)
 
-        body.addView(section("Test it"))
-        val t = card(16)
-        t.addView(label(if (CamState.running) "✅ Cam server is running now – try it from your iPhone." else "The cam normally runs only while she's watching. Start a test so you can set up your iPhone now.", 14f, Pal.SUB))
-        t.addView(pill(if (CamState.running) "⏹  Stop test" else "▶  Start test now", if (CamState.running) Pal.RED else Pal.GREEN) {
-            if (CamState.running) stopService(Intent(this, CamService::class.java))
-            else startForegroundService(Intent(this, CamService::class.java))
-            body.postDelayed({ rebuild() }, 600)
-        }, lp(MATCH, WRAP, t = dp(10)))
-        body.addView(t)
+        body.addView(section("🌙  Wake her phone from your iPhone"))
+        val w = card(16)
+        w.addView(label(if (CamState.running) "✅ Connected. Your iPhone can reach this phone now, even with the screen off." else "Starting the connection…", 14f, Pal.SUB))
+        val overlayOk = android.provider.Settings.canDrawOverlays(this)
+        val pm = getSystemService(POWER_SERVICE) as android.os.PowerManager
+        val batteryOk = pm.isIgnoringBatteryOptimizations(packageName)
+        w.addView(label("So you can start a video or sounds while her phone is asleep, allow these two once:", 14f, Pal.INK, true).apply { setPadding(0, dp(10), 0, 0) })
+        w.addView(pill(if (overlayOk) "✅  Waking up is allowed" else "1.  Allow waking up  (Display over other apps)", if (overlayOk) Pal.CARD else Pal.GREEN, if (overlayOk) Pal.INK else android.graphics.Color.WHITE) {
+            try { startActivity(Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:$packageName"))) }
+            catch (_: Exception) { toast("Open Settings → Apps → Avriella TV → Display over other apps") }
+        }, lp(MATCH, WRAP, t = dp(8)))
+        w.addView(pill(if (batteryOk) "✅  Stays connected while asleep" else "2.  Stay connected while asleep  (battery)", if (batteryOk) Pal.CARD else Pal.GREEN, if (batteryOk) Pal.INK else android.graphics.Color.WHITE) {
+            @android.annotation.SuppressLint("BatteryLife")
+            val i = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:$packageName"))
+            try { startActivity(i) } catch (_: Exception) { toast("Open Settings → Apps → Avriella TV → Battery → Unrestricted") }
+        }, lp(MATCH, WRAP, t = dp(8)))
+        w.addView(label("Leaving her phone on the charger overnight is best: the connection stays on all the time so you can check in whenever you like.", 13f, Pal.SUB).apply { setPadding(0, dp(10), 0, 0) })
+        body.addView(w)
 
         body.addView(section("Privacy"))
         val p = card(16)
@@ -200,9 +211,15 @@ class CamSetupActivity : ParentActivity() {
             addView(label("This works with no cell signal at all. The phones talk directly; nothing goes to the internet. (Bluetooth can't be used, because iPhone web apps aren't allowed to use it.)", 13f, Pal.SUB).apply { setPadding(0, dp(8), 0, 0) })
         }, lp(t = dp(4)))
 
-        body.addView(section("Watching when you're away from home"))
+        body.addView(section("💼  Watching when you're away (at work)"))
+        val ts = com.avriella.tv.cam.Wake.tailscale()
         body.addView(card(16).apply {
-            addView(label("Install the free Tailscale app on this phone and on your iPhones, sign in to the same account on all of them, and an extra 100.x.x.x address will appear above. That one works from anywhere.", 14f, Pal.SUB))
+            addView(label("Use the free Tailscale app to reach this phone from anywhere, over cell data or any Wi-Fi. It's a private link between your own phones; nothing is shared with anyone else.", 14f, Pal.SUB))
+            addView(step(1, "Install Tailscale from the Play Store on this phone, and from the App Store on each iPhone."))
+            addView(step(2, "Sign in to the same account on all of them, and turn Tailscale on."))
+            addView(step(3, "On this phone, in Tailscale's settings, turn on \"Always-on VPN\" (or start on boot) so it stays connected."))
+            addView(step(4, "Open the Baby Cam app at home once; it remembers this phone's Tailscale address and uses it by itself when you're away."))
+            addView(label(if (ts != null) "✅ Tailscale is on. Away-from-home address: http://$ts:${CamState.port}" else "Tailscale isn't running on this phone yet.", 14f, if (ts != null) Pal.GREEN else Pal.SUB, true).apply { setPadding(0, dp(10), 0, 0) })
         })
     }
 

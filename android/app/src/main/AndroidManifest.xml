@@ -13,6 +13,10 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.TURN_SCREEN_ON" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-feature android:name="android.hardware.camera.front" android:required="false" />
 
@@ -40,6 +44,9 @@
         <activity android:name=".EditShelfActivity" />
         <activity android:name=".LockSetupActivity" />
         <activity android:name=".CamSetupActivity" />
+        <activity android:name=".BabyActivity" />
+        <activity android:name=".BabyStatsActivity" />
+        <activity android:name=".FlipbookActivity" android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
 
         <activity
             android:name=".kid.PlayerActivity"
@@ -65,6 +72,17 @@
             android:name=".cam.CamService"
             android:exported="false"
             android:foregroundServiceType="camera|connectedDevice" />
+
+        <receiver android:name=".PhotoReminder$Receiver" android:exported="false" />
+
+        <receiver
+            android:name=".cam.BootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <receiver
             android:name=".kid.AdminReceiver"

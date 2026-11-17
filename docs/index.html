@@ -13,20 +13,28 @@
 <title>Baby Cam</title>
 <style>
   :root {
-    --ink: #ffffff; --sub: rgba(255,255,255,.8);
-    --glass: rgba(255,255,255,.16); --glass-hi: rgba(255,255,255,.26); --edge: rgba(255,255,255,.38);
-    --pink: #ff5fa2; --orange: #ff9a3c; --yellow: #ffd23f; --green: #34d399; --sky: #38bdf8; --violet: #a78bfa;
+    color-scheme: dark;
+    --ink: #ffffff; --sub: rgba(255,255,255,.82);
+    --glass: rgba(255,255,255,.15); --glass-hi: rgba(255,255,255,.24); --edge: rgba(255,255,255,.3);
+    --pink: #ff6fa8; --orange: #ff9f52; --yellow: #ffd65a; --green: #3ddba0; --sky: #56c4fa; --violet: #b09bff;
+    --accent: linear-gradient(135deg, #ffab5e 0%, #ff7d9c 55%, #f06bb8 100%);
+    --accent-glow: 0 1px 2px rgba(120,20,70,.25), 0 8px 22px rgba(255,111,168,.42);
+    --on-ink: #5a2a86;
+    --bg-top: #2b2473; --bg-mid: #7a2c8c; --bg-low: #c7476f; --bg-end: #ee8a4c;
+    --soft-shadow: 0 1px 2px rgba(24,8,56,.14), 0 6px 16px rgba(24,8,56,.16), 0 22px 48px rgba(24,8,56,.2);
+    --ease: cubic-bezier(.2,.8,.2,1);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html { background: #3b1d8f; }
+  html { background: var(--bg-top); -webkit-text-size-adjust: 100%; }
   html, body { margin: 0; min-height: 100%; color: var(--ink);
     font: 17px/1.4 ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   body { padding: calc(env(safe-area-inset-top) + 6px) 16px calc(env(safe-area-inset-bottom) + 10px);
     display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; position: relative; overflow-x: hidden;
-    background: linear-gradient(160deg, #3b1d8f 0%, #8a1f6e 55%, #d9541e 100%); background-attachment: fixed; }
+    background: linear-gradient(165deg, var(--bg-top) 0%, var(--bg-mid) 42%, var(--bg-low) 76%, var(--bg-end) 100%); background-attachment: fixed;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
   /* floating colour blobs behind the glass */
   .blobs { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
-  .blobs i { position: absolute; border-radius: 50%; filter: blur(50px); opacity: .7; animation: float 18s ease-in-out infinite alternate; }
+  .blobs i { position: absolute; border-radius: 50%; filter: blur(64px); opacity: .5; animation: float 22s ease-in-out infinite alternate; }
   .blobs i:nth-child(1) { width: 60vw; height: 60vw; background: var(--sky); top: -12vw; left: -15vw; }
   .blobs i:nth-child(2) { width: 55vw; height: 55vw; background: var(--yellow); top: 35%; right: -20vw; animation-delay: -6s; opacity: .5; }
   .blobs i:nth-child(3) { width: 65vw; height: 65vw; background: var(--pink); bottom: -20vw; left: -10vw; animation-delay: -12s; }
@@ -34,10 +42,10 @@
   @keyframes float { to { transform: translate(8vw, 6vh) scale(1.15); } }
   @media (prefers-reduced-motion: reduce) { .blobs i { animation: none; } }
 
-  .glass { background: var(--glass); border: 1px solid var(--edge); border-radius: 28px;
-    -webkit-backdrop-filter: blur(22px) saturate(160%); backdrop-filter: blur(22px) saturate(160%);
-    box-shadow: 0 10px 40px rgba(40,10,80,.25), inset 0 1px 0 rgba(255,255,255,.35); }
-  .card { padding: 20px; margin-bottom: 14px; }
+  .glass { background: linear-gradient(165deg, rgba(255,255,255,.22), rgba(255,255,255,.1)); border: 1px solid var(--edge); border-radius: 30px;
+    -webkit-backdrop-filter: blur(26px) saturate(170%); backdrop-filter: blur(26px) saturate(170%);
+    box-shadow: var(--soft-shadow), inset 0 1px 0 rgba(255,255,255,.38), inset 0 -1px 0 rgba(255,255,255,.05); }
+  .card { padding: 22px 20px; margin-bottom: 16px; animation: rise .45s var(--ease) both; }
   header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 6px 0 14px; border-radius: 999px; }
   header .logo { font-size: 26px; }
   header h1 { font-size: 21px; margin: 0; flex: 1; letter-spacing: .2px; }
@@ -45,19 +53,23 @@
   .dot.live { background: var(--green); box-shadow: 0 0 0 0 rgba(52,211,153,.7); animation: pulse 1.8s infinite; }
   @keyframes pulse { 70% { box-shadow: 0 0 0 10px rgba(52,211,153,0); } 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); } }
   .hidden { display: none !important; }
-  h2 { font-size: 24px; margin: 0 0 6px; }
+  h2 { font-size: 23px; line-height: 1.2; letter-spacing: -.2px; margin: 0 0 8px; }
   .big-emoji { font-size: 46px; line-height: 1; margin-bottom: 8px; }
   label.field { display: block; color: var(--sub); font-size: 14px; font-weight: 700; margin: 16px 0 6px; letter-spacing: .3px; }
   input { width: 100%; font: inherit; font-size: 22px; padding: 15px 18px; border-radius: 18px; outline: none;
-    border: 1px solid var(--edge); background: rgba(255,255,255,.14); color: var(--ink); }
+    border: 1px solid var(--edge); background: rgba(20,10,60,.22); color: var(--ink);
+    box-shadow: inset 0 1px 3px rgba(20,8,50,.22); transition: border-color .2s, background .2s, box-shadow .2s; }
   input::placeholder { color: rgba(255,255,255,.45); }
-  input:focus { border-color: #fff; background: rgba(255,255,255,.22); }
+  input:focus { border-color: rgba(255,255,255,.9); background: rgba(20,10,60,.3); box-shadow: 0 0 0 4px rgba(255,255,255,.18); }
   input.code { letter-spacing: .35em; text-align: center; font-weight: 800; font-size: 28px; }
   button { font: inherit; font-weight: 800; border: 0; border-radius: 999px; padding: 15px 20px; color: #fff;
-    min-height: 54px; cursor: pointer; transition: transform .12s; }
-  button:active { transform: scale(.96); }
-  .btn-main { background: linear-gradient(135deg, var(--orange), var(--pink)); box-shadow: 0 8px 24px rgba(255,95,162,.45); }
-  .btn-soft { background: var(--glass-hi); border: 1px solid var(--edge); }
+    min-height: 54px; cursor: pointer; touch-action: manipulation; -webkit-user-select: none; user-select: none;
+    transition: transform .18s var(--ease), filter .18s, background .2s, color .2s, box-shadow .2s, opacity .2s; }
+  button:active { transform: scale(.95); filter: brightness(1.12); }
+  button:disabled { opacity: .5; }
+  button:focus-visible, summary:focus-visible { outline: 3px solid rgba(255,255,255,.85); outline-offset: 2px; }
+  .btn-main { background: var(--accent); box-shadow: var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.35); text-shadow: 0 1px 1px rgba(120,20,70,.25); }
+  .btn-soft { background: var(--glass-hi); border: 1px solid var(--edge); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); }
   button.wide { width: 100%; margin-top: 18px; font-size: 19px; }
   .muted { color: var(--sub); font-size: 15px; }
   .err { color: #fff3a8; font-weight: 700; min-height: 1.4em; margin-top: 10px; }
@@ -65,7 +77,8 @@
   .row button { flex: 1; }
 
   #stage { position: relative; width: 100%; border-radius: 28px; overflow: hidden; background: rgba(0,0,0,.55);
-    aspect-ratio: 3 / 4; max-height: 62vh; border: 2px solid rgba(255,255,255,.55); box-shadow: 0 14px 40px rgba(30,0,60,.4); }
+    aspect-ratio: 3 / 4; max-height: 62vh; border: 1px solid rgba(255,255,255,.45);
+    box-shadow: 0 0 0 5px rgba(255,255,255,.1), 0 2px 6px rgba(24,8,56,.2), 0 18px 44px rgba(24,8,56,.38); }
   #stage img { position: absolute; left: 50%; top: 50%; object-fit: contain; transform-origin: center; }
   #overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     flex-direction: column; gap: 10px; color: #fff; text-align: center; padding: 24px; font-weight: 700; }
@@ -84,8 +97,9 @@
 
   .controls { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
   .controls button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-    border-radius: 24px; padding: 12px 4px; min-height: 86px; font-size: 13px; border: 1px solid var(--edge);
-    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+    border-radius: 26px; padding: 12px 4px; min-height: 88px; font-size: 13px; border: 1px solid var(--edge);
+    -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+    box-shadow: 0 6px 16px rgba(24,8,56,.18), inset 0 1px 0 rgba(255,255,255,.35); }
   .controls button span { font-size: 28px; line-height: 1; }
   #flip   { background: linear-gradient(160deg, rgba(56,189,248,.55), rgba(56,189,248,.25)); }
   #rotate { background: linear-gradient(160deg, rgba(167,139,250,.6), rgba(167,139,250,.25)); }
@@ -125,19 +139,21 @@
   .times { display: flex; justify-content: space-between; font-size: 13px; color: var(--sub); font-weight: 700; }
   .transport { display: flex; justify-content: center; gap: 18px; margin-top: 10px; }
   .transport button { width: 60px; height: 60px; padding: 0; font-size: 24px; background: var(--glass-hi); border: 1px solid var(--edge); }
-  .transport button.pp { width: 72px; height: 72px; font-size: 30px; background: linear-gradient(135deg, var(--orange), var(--pink));
-    box-shadow: 0 8px 24px rgba(255,95,162,.45); }
+  .transport button.pp { width: 72px; height: 72px; font-size: 30px; background: var(--accent); border-color: rgba(255,255,255,.5);
+    box-shadow: var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.35); }
   .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; margin: 0 -4px 6px; padding-left: 4px; scrollbar-width: none; }
   .tabs::-webkit-scrollbar { display: none; }
   .tabs button { flex: none; min-height: 42px; padding: 8px 16px; font-size: 15px; background: rgba(255,255,255,.14); border: 1px solid var(--edge); }
-  .tabs button.on { background: #fff; color: #7a2a8a; }
+  .tabs button.on { background: #fff; color: var(--on-ink); border-color: #fff; box-shadow: 0 4px 14px rgba(24,8,56,.22); }
   .vid { display: flex; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 8px; margin: 8px 0 0;
-    border-radius: 20px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); min-height: 0; font-weight: 700; }
+    border-radius: 22px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); min-height: 0; font-weight: 700;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.16); }
+  .vid:active { transform: scale(.98); background: rgba(255,255,255,.18); }
   .vid .t { flex: 1; min-width: 0; font-size: 15px; line-height: 1.25; }
   .vid .t small { display: block; color: var(--sub); font-size: 12px; margin-top: 3px; }
   .vid.cur { background: rgba(52,211,153,.28); border-color: rgba(167,243,208,.8); }
   .vid .go { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 16px;
-    background: linear-gradient(135deg, var(--orange), var(--pink)); }
+    background: var(--accent); box-shadow: 0 4px 12px rgba(255,111,168,.4), inset 0 1px 0 rgba(255,255,255,.35); }
   .vid .mini { height: 4px; border-radius: 4px; background: rgba(255,255,255,.2); margin-top: 6px; overflow: hidden; }
   .vid .mini i { display: block; height: 100%; background: var(--yellow); }
   .ctl-label { display: flex; justify-content: space-between; align-items: center; margin: 16px 0 8px; font-weight: 800; font-size: 15px; }
@@ -153,7 +169,7 @@
   .seg button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 4px; min-height: 66px; font-size: 22px;
     border-radius: 20px; background: rgba(255,255,255,.14); border: 1px solid var(--edge); }
   .seg button small { font-size: 12px; font-weight: 800; }
-  .seg button.on, #sleepSeg button.on { background: #fff; color: #7a2a8a; }
+  .seg button.on, #sleepSeg button.on { background: #fff; color: var(--on-ink); border-color: #fff; box-shadow: 0 4px 14px rgba(24,8,56,.22); }
   .car-help { margin: 14px 0 4px; padding: 12px 14px; border-radius: 18px; background: rgba(255,255,255,.12); border: 1px solid var(--edge); }
   .car-help summary { font-weight: 800; cursor: pointer; }
   .car-help p { font-size: 13px; margin: 8px 0; }
@@ -168,6 +184,101 @@
   .toast { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24px); transform: translateX(-50%); z-index: 20;
     padding: 12px 18px; border-radius: 999px; font-weight: 800; background: rgba(30,10,60,.85); max-width: 90vw; text-align: center; }
   footer { margin-top: auto; padding: 16px 4px 6px; text-align: center; font-size: 13px; }
+
+  /* ---- finishing touches: hierarchy, states, motion ---- */
+  header { box-shadow: 0 1px 2px rgba(24,8,56,.14), 0 8px 22px rgba(24,8,56,.18), inset 0 1px 0 rgba(255,255,255,.38); }
+  header h1 { font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .muted { line-height: 1.45; }
+  .err:not(:empty) { padding: 10px 14px; border-radius: 16px; background: rgba(60,10,40,.35); border: 1px solid rgba(255,243,168,.4); font-size: 15px; }
+  .big-emoji { filter: drop-shadow(0 6px 10px rgba(24,8,56,.3)); }
+  .pill { box-shadow: 0 6px 16px rgba(24,8,56,.16), inset 0 1px 0 rgba(255,255,255,.3); }
+  .live-tag { letter-spacing: .6px; border: 1px solid rgba(255,255,255,.25); }
+  .spinner { border-width: 4px; width: 44px; height: 44px; filter: drop-shadow(0 2px 8px rgba(255,111,168,.45)); }
+  .thumb { box-shadow: 0 4px 12px rgba(24,8,56,.25); }
+  .vid.cur { box-shadow: 0 0 0 3px rgba(61,219,160,.22), inset 0 1px 0 rgba(255,255,255,.2); }
+  .vid .mini i { border-radius: 4px; background: linear-gradient(90deg, var(--yellow), var(--orange)); }
+  .bar { box-shadow: inset 0 1px 2px rgba(24,8,56,.25); }
+  .scrub .knob { box-shadow: 0 0 0 4px rgba(255,255,255,.22), 0 2px 8px rgba(24,8,56,.4); }
+  .scrub-tip { border-radius: 12px; box-shadow: 0 6px 16px rgba(24,8,56,.35); }
+  .ctl-label { margin-top: 20px; letter-spacing: .1px; }
+  .ctl-label b { border: 1px solid rgba(255,255,255,.2); font-variant-numeric: tabular-nums; }
+  .times { font-variant-numeric: tabular-nums; }
+  .vol input[type=range] { box-shadow: inset 0 1px 2px rgba(24,8,56,.25); }
+  .vol input[type=range]::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgba(255,255,255,.22), 0 3px 10px rgba(24,8,56,.35); }
+  .seg button, .tabs button, .sounds button, .transport button, .vol button { box-shadow: inset 0 1px 0 rgba(255,255,255,.2); }
+  .sounds button.on { border-color: #fff; box-shadow: 0 0 0 2px #fff inset, 0 8px 20px rgba(86,196,250,.35); }
+  label.switch input { transition: background .25s var(--ease); box-shadow: inset 0 1px 3px rgba(24,8,56,.25); }
+  label.switch input::after { transition: transform .28s var(--ease); }
+  label.switch input:checked { background: linear-gradient(135deg, var(--green), #2fc4b2); border-color: rgba(190,255,225,.7); }
+  .steps li::before { box-shadow: 0 3px 8px rgba(255,159,82,.4); }
+  .car-help { transition: background .2s; }
+  .car-help[open] { background: rgba(255,255,255,.16); }
+  .sheet { animation: fade .2s ease both; }
+  .sheet-card { background: linear-gradient(165deg, rgba(120,60,170,.72), rgba(80,36,130,.72)); animation: sheet-up .32s var(--ease) both; }
+  .toast { border: 1px solid rgba(255,255,255,.22); box-shadow: 0 10px 28px rgba(24,8,56,.4);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); animation: toast-in .28s var(--ease) both; }
+  #vidList > p.muted, #overlay { letter-spacing: .1px; }
+  #vidList > p.muted { text-align: center; padding: 22px 12px; margin: 8px 0 0; border-radius: 22px;
+    border: 1.5px dashed rgba(255,255,255,.3); background: rgba(255,255,255,.06); }
+  @keyframes rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } }
+  @keyframes sheet-up { from { opacity: 0; transform: translateY(28px); } to { opacity: 1; transform: none; } }
+  @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+  /* light appearance: same glass look on a brighter, sunnier wash (text stays white, so it stays readable) */
+  @media (prefers-color-scheme: light) {
+    :root { --bg-top: #4a3bb5; --bg-mid: #9a3aa6; --bg-low: #d9507c; --bg-end: #f08f4e; --on-ink: #6a2f9a; }
+    .blobs i { opacity: .55; }
+    .glass { box-shadow: 0 1px 2px rgba(60,20,100,.12), 0 6px 16px rgba(60,20,100,.14), 0 22px 48px rgba(60,20,100,.18),
+      inset 0 1px 0 rgba(255,255,255,.42), inset 0 -1px 0 rgba(255,255,255,.05); }
+    .muted, .now small, .vid .t small { text-shadow: 0 1px 2px rgba(60,20,100,.25); }
+  }
+  /* small iPhones */
+  @media (max-width: 360px) {
+    body { padding-left: 12px; padding-right: 12px; }
+    .card { padding: 18px 16px; }
+    .controls { gap: 8px; }
+    .controls button { min-height: 80px; font-size: 12px; border-radius: 22px; }
+    .transport { gap: 14px; }
+    .sounds button { font-size: 11px; }
+    h2 { font-size: 21px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .card, .sheet, .sheet-card, .toast { animation: none; }
+    button, label.switch input, label.switch input::after { transition: none; }
+  }
+</style>
+<style id="babyCss">
+  .baby-hero { padding: 16px; border-radius: 22px; background: linear-gradient(135deg, rgba(255,214,231,.28), rgba(214,206,255,.22)); display: flex; flex-direction: column; gap: 3px; }
+  .baby-hero b { font-size: 22px; }
+  .baby-hero small { opacity: .85; font-size: 13px; }
+  .baby-kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .baby-kinds button { min-height: 64px; padding: 8px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12px; font-weight: 700; border-radius: 18px; background: rgba(255,255,255,.14); color: inherit; border: 1px solid rgba(255,255,255,.18); }
+  .baby-kinds button span { font-size: 24px; line-height: 1.1; }
+  .baby-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .baby-photo { position: relative; aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: rgba(255,255,255,.12); border: 1px dashed rgba(255,255,255,.3); display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; }
+  .baby-photo.has { border-style: solid; }
+  .baby-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .baby-photo small { position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 4px 5px; font-size: 11px; font-weight: 700; text-align: center; background: linear-gradient(transparent, rgba(0,0,0,.6)); color: #fff; }
+  .baby-day { font-size: 12px; font-weight: 700; opacity: .7; margin: 12px 4px 4px; }
+  .baby-row { display: flex; gap: 10px; align-items: flex-start; padding: 9px 10px; border-radius: 14px; background: rgba(255,255,255,.08); margin-bottom: 5px; cursor: pointer; }
+  .baby-row .e { font-size: 20px; }
+  .baby-row .t { margin-left: auto; font-size: 12px; opacity: .75; white-space: nowrap; }
+  .baby-row .n { font-size: 13px; opacity: .8; }
+  .baby-info-row { display: flex; gap: 10px; padding: 9px 4px; border-bottom: 1px solid rgba(255,255,255,.12); cursor: pointer; }
+  .baby-info-row b { width: 112px; flex: none; font-size: 14px; }
+  .baby-info-row span { font-size: 14px; opacity: .9; }
+  .flip { position: fixed; inset: 0; z-index: 60; background: #000; color: #fff; }
+  .flip.hidden { display: none; }
+  .flip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity .45s ease; }
+  .flip-top { position: absolute; top: 0; left: 0; right: 0; padding: calc(env(safe-area-inset-top) + 18px) 20px 34px; background: linear-gradient(rgba(0,0,0,.75), transparent); display: flex; flex-direction: column; }
+  .flip-top b { font-size: 28px; }
+  .flip-top small { opacity: .85; }
+  .flip-bottom { position: absolute; bottom: 0; left: 0; right: 0; padding: 34px 12px calc(env(safe-area-inset-bottom) + 18px); background: linear-gradient(transparent, rgba(0,0,0,.8)); text-align: center; }
+  .flip-dots { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .flip-dots i { width: 8px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.35); }
+  .flip-dots i.on { background: #fff; }
+  .flip-ctl { display: flex; justify-content: center; gap: 8px; }
+  .flip-ctl button { min-height: 44px; min-width: 52px; padding: 6px 14px; border-radius: 22px; background: rgba(255,255,255,.18); color: #fff; border: 0; font-size: 18px; }
 </style>
 </head>
 <body>
@@ -278,6 +389,15 @@
   </div>
   <div class="glass card" id="ctlCard">
     <h2>🎛️ Her phone</h2>
+    <div class="hidden" id="sleepBox" style="margin-bottom:14px">
+      <p class="muted" id="sleepMsg" style="margin:0 0 8px">😴 Her screen is off.</p>
+      <button class="wide btn-main" id="wakeBtn">☀️ Wake her phone</button>
+    </div>
+    <div class="hidden" id="touchBox" style="margin-bottom:14px">
+      <div class="ctl-label"><span>✋ Touch screen</span><b id="touchVal">–</b></div>
+      <button class="wide btn-soft" id="touchBtn">🔓 Unlock touch</button>
+      <p class="muted" style="margin:6px 0 0;font-size:13px">Holding both volume buttons on her phone still opens the parent panel too.</p>
+    </div>
 
     <div class="ctl-label"><span>🔊 Volume</span><b id="volVal">–</b></div>
     <div class="vol">
@@ -325,6 +445,33 @@
     <div class="tabs" id="shelfTabs"></div>
     <div id="vidList"><p class="muted">Loading her videos…</p></div>
   </div>
+  <div class="glass card hidden" id="babyCard">
+    <h2>👶 Baby book</h2>
+    <div class="baby-hero">
+      <b id="babyAge">–</b>
+      <small id="babyAgeSub"></small>
+      <small id="babyNext"></small>
+    </div>
+    <div class="ctl-label" style="margin-top:14px"><span>➕ Log something</span></div>
+    <div class="baby-kinds" id="babyKinds"></div>
+    <p class="muted" id="babyToday" style="margin:10px 0 0;font-size:14px"></p>
+
+    <div class="ctl-label" style="margin-top:18px"><span>📸 Watch her grow</span><b id="babyPhotoCount"></b></div>
+    <button class="wide btn-main hidden" id="babyAddMonth" style="margin-bottom:10px">📸 Add this month's photo</button>
+    <button class="wide btn-soft" id="babyFlip" style="margin-bottom:10px">🎞️ Flip mode: watch her grow</button>
+    <div class="baby-photos" id="babyPhotos"></div>
+    <input type="file" accept="image/*" id="babyFile" class="hidden">
+
+    <div class="ctl-label" style="margin-top:18px"><span>📖 History</span></div>
+    <div id="babyList"></div>
+    <button class="wide btn-soft hidden" id="babyMore" style="margin-top:8px">Show more</button>
+
+    <details style="margin-top:16px">
+      <summary>💗 Her info</summary>
+      <div id="babyInfo" style="margin-top:8px"></div>
+    </details>
+  </div>
+
   <div class="glass card">
     <label class="switch"><input type="checkbox" id="autoFind"> <span>Auto-find her phone if its Wi-Fi address changes</span></label>
     <p class="muted" id="findStatus" style="margin:8px 0 0"></p>
@@ -343,6 +490,24 @@
   </div>
 </div>
 <div class="toast hidden" id="toast"></div>
+<div class="flip hidden" id="flip">
+  <img id="flipA" alt=""><img id="flipB" alt="" style="opacity:0">
+  <div class="flip-top"><b id="flipTitle"></b><small id="flipSub"></small></div>
+  <div class="flip-bottom">
+    <div class="flip-dots" id="flipDots"></div>
+    <div class="flip-ctl">
+      <button id="flipPrev" aria-label="Previous">⏮</button>
+      <button id="flipPlay" aria-label="Play or pause">⏸</button>
+      <button id="flipNext" aria-label="Next">⏭</button>
+      <button id="flipSpeed">🚶 Normal</button>
+      <button id="flipClose" aria-label="Close">✕</button>
+    </div>
+    <div class="flip-ctl" style="margin-top:8px">
+      <button id="flipReplace" style="font-size:14px">🔁 Replace</button>
+      <button id="flipRemove" style="font-size:14px">🗑️ Remove</button>
+    </div>
+  </div>
+</div>
 
 <footer class="muted" id="foot"></footer>
 
@@ -370,6 +535,16 @@
     $("foot").textContent = "Connects straight to her phone. Nothing is uploaded anywhere.";
     var autoTimer = null;
 
+    // Her phone hands over its away-from-home (Tailscale) address once, then sends us straight back.
+    (function () {
+      var q = new URLSearchParams(location.search), rem = q.get("remember"), back = q.get("back") || "";
+      if (!rem) return;
+      if (/^100\.\d+\.\d+\.\d+:\d+$/.test(rem)) store.set("remoteAddr", rem);
+      history.replaceState(null, "", location.pathname);
+      var m = /^http:\/\/([^\/:]+)(:\d+)?\//.exec(back);
+      if (m && /^(avriella\.local|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|192\.168\.\d+\.\d+|100\.\d+\.\d+\.\d+)$/.test(m[1])) location.replace(back);
+    })();
+
     function place() { return store.get("place") === "car" ? "car" : "home"; }
     var AUTO = "avriella.local:8080"; // her phone announces this name on any network it's on
     function placeAddr(p) {
@@ -396,7 +571,7 @@
     function candidates() {
       var list = [];
       function add(a) { if (a && list.indexOf(a) < 0) list.push(a); }
-      add(placeAddr(place())); add(AUTO); add(store.get("lastSeen")); add(store.get("addr")); add(store.get("carAddr")); add("172.20.10.9:8080");
+      add(placeAddr(place())); add(AUTO); add(store.get("lastSeen")); add(store.get("addr")); add(store.get("carAddr")); add("172.20.10.9:8080"); add(store.get("remoteAddr"));
       return list;
     }
     function ping(a) {
@@ -415,7 +590,13 @@
         ping(a).then(function (ok) {
           left--;
           if (ok && !won) { won = true; store.set("lastSeen", ok); location.href = "http://" + ok + "/"; }
-          else if (left === 0 && !won) go(); // nothing answered a quick check: try the name anyway
+          else if (left === 0 && !won) {
+            // Nothing answered a quick check. Away from home, her Tailscale address is the one that works
+            // (it works at home too); otherwise try her phone's name.
+            var r = store.get("remoteAddr");
+            if (r && store.get("manual") !== "1") { var c = store.get("lcode"); location.href = "http://" + r + "/" + (c ? "#code=" + c : ""); }
+            else go();
+          }
         });
       });
     }
@@ -564,6 +745,10 @@
       $("battery").textContent = (j.charging ? "⚡ " : "🔋 ") + j.battery + "%";
       updateNow(j);
       updateControls(j);
+      updateSleep(j);
+      updateTouch(j);
+      if (!babyLoaded) loadBaby();
+      rememberAddrs(j);
       if (typeof j.rotation === "number" && j.rotation !== deviceRot) { deviceRot = j.rotation; layout(); }
       if (j.error) overlay(j.error, false);
       if (!streaming && !document.hidden) startStream();
@@ -574,6 +759,219 @@
       fails++;
       if (fails >= 2 && autoFind && !scanning && !document.hidden) findPhone();
     });
+  }
+
+  // ---------- Baby book: log, her info, monthly photos, flip mode ----------
+  var baby = null, babyLoaded = false, babyShowAll = false, pickMonth = 0;
+  function bapi(p, extra) { return "/api/baby" + p + "?key=" + encodeURIComponent(code || "") + (extra || ""); }
+  function esc(t) { return String(t == null ? "" : t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function loadBaby() {
+    babyLoaded = true;
+    return fetch(bapi(""), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j || !j.age) return; baby = j; renderBaby();
+    }).catch(function () {});
+  }
+  setInterval(function () { if (babyLoaded && !document.hidden && $("flip").classList.contains("hidden")) loadBaby(); }, 60000);
+  function kindOf(id) { var k = (baby.kinds || []).filter(function (x) { return x.id === id; })[0]; return k || { id: id, emoji: "📝", label: "Note" }; }
+  function agoTxt(t) {
+    var m = Math.floor((Date.now() - t) / 60000);
+    if (m < 1) return "just now"; if (m < 60) return m + " min ago";
+    if (m < 1440) return Math.floor(m / 60) + " hr ago"; if (m < 2880) return "yesterday";
+    return Math.floor(m / 1440) + " days ago";
+  }
+  function monthName(m) { return m === 0 ? "Newborn" : (m % 12 === 0 ? (m / 12) + (m === 12 ? " year" : " years") + " 🎂" : m + (m === 1 ? " month" : " months")); }
+  function monthDate(m) { var d = new Date(baby.birth); d.setMonth(d.getMonth() + m); return d; }
+  var hints = { food: "What and how much? (e.g. 4 oz bottle)", diaper: "Wet, dirty, both…", nap: "How long? (e.g. 1 hr 20 min)", med: "Which medicine and how much?", growth: "Weight and height (e.g. 18 lb, 28 in)", milestone: "What did she do?", bath: "Anything to note? (optional)", note: "Write a note" };
+  function renderBaby() {
+    var j = baby, a = j.age;
+    $("babyCard").classList.remove("hidden");
+    $("babyAge").textContent = (j.name || "She") + " is " + a.text + " old";
+    $("babyAgeSub").textContent = a.totalDays.toLocaleString() + " days · " + a.totalWeeks + " weeks · " + a.totalMonths + " months";
+    var next = monthDate(a.totalMonths + 1), inDays = Math.max(1, Math.ceil((next - Date.now()) / 86400000)), nm = a.totalMonths + 1;
+    $("babyNext").textContent = "✨ " + (nm % 12 === 0 ? "Turns " + nm / 12 + " 🎂" : nm + " months old") + " in " + inDays + " day" + (inDays === 1 ? "" : "s") +
+      " · born " + new Date(j.birth).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+    if (!$("babyKinds").children.length) {
+      j.kinds.forEach(function (k) {
+        var b = document.createElement("button");
+        b.innerHTML = "<span>" + k.emoji + "</span>" + esc(k.label);
+        b.onclick = function () {
+          var note = prompt(k.emoji + " " + k.label + " — " + (hints[k.id] || "note"), "");
+          if (note === null) return;
+          fetch(bapi("/log", "&kind=" + k.id + "&by=iPhone&note=" + encodeURIComponent(note)), { cache: "no-store" })
+            .then(function (r) { return r.json(); }).then(function () { toast(k.emoji + " Logged"); loadBaby(); })
+            .catch(function () { toast("Couldn't reach her phone."); });
+        };
+        $("babyKinds").appendChild(b);
+      });
+    }
+    var d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    var today = j.entries.filter(function (e) { return e.time >= d0.getTime(); });
+    var parts = j.kinds.map(function (k) { var n = today.filter(function (e) { return e.kind === k.id; }).length; return n ? k.emoji + " " + n : ""; }).filter(Boolean);
+    var lastBath = j.entries.filter(function (e) { return e.kind === "bath"; })[0];
+    $("babyToday").textContent = (parts.length ? "Today: " + parts.join("  ·  ") : "Nothing logged yet today.") + (lastBath ? "   🛁 Last bath " + agoTxt(lastBath.time) : "");
+    var have = {}; (j.photos || []).forEach(function (p) { have[p.month] = p.t; });
+    $("babyPhotoCount").textContent = (j.photos || []).length + " photos";
+    $("babyAddMonth").classList.toggle("hidden", !!have[a.totalMonths]);
+    $("babyAddMonth").textContent = "📸 Add this month's photo (" + monthName(a.totalMonths) + ")";
+    var g = $("babyPhotos"); g.innerHTML = "";
+    for (var m = a.totalMonths; m >= 0; m--) (function (m) {
+      var t = document.createElement("div");
+      t.className = "baby-photo" + (have[m] ? " has" : "");
+      t.innerHTML = (have[m] ? '<img loading="lazy" alt="" src="' + bapi("/photo", "&month=" + m + "&t=" + have[m]) + '">' : "＋") + "<small>" + esc(monthName(m)) + "</small>";
+      t.onclick = function () { if (have[m]) openFlip(m, false); else pickPhoto(m); };
+      g.appendChild(t);
+    })(m);
+    var list = $("babyList"), html = "", lastDay = "", shown = babyShowAll ? j.entries : j.entries.slice(0, 15);
+    shown.forEach(function (e) {
+      var dt = new Date(e.time), day = dt.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" }), k = kindOf(e.kind);
+      if (day !== lastDay) { html += '<div class="baby-day">' + esc(day) + "</div>"; lastDay = day; }
+      html += '<div class="baby-row" data-id="' + esc(e.id) + '"><span class="e">' + k.emoji + "</span><div><b>" + esc(k.label) + "</b>" +
+        (e.note ? '<div class="n">' + esc(e.note) + "</div>" : "") + '</div><span class="t">' + dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + (e.by === "iPhone" ? " 📱" : "") + "</span></div>";
+    });
+    list.innerHTML = html || '<p class="muted">Everything you log shows up here, newest first.</p>';
+    $("babyMore").classList.toggle("hidden", babyShowAll || j.entries.length <= 15);
+    Array.prototype.forEach.call(list.querySelectorAll(".baby-row"), function (r) {
+      r.onclick = function () {
+        var e = j.entries.filter(function (x) { return x.id === r.getAttribute("data-id"); })[0]; if (!e) return;
+        var n = prompt("Edit the note (or type DELETE to remove this entry):", e.note);
+        if (n === null) return;
+        var url = n.trim().toUpperCase() === "DELETE" ? bapi("/delete", "&id=" + e.id) : bapi("/edit", "&id=" + e.id + "&note=" + encodeURIComponent(n));
+        fetch(url, { cache: "no-store" }).then(function () { loadBaby(); });
+      };
+    });
+    var info = '<div class="baby-info-row" data-f=""><b>Birthday</b><span>' + esc(new Date(j.birth).toLocaleString([], { dateStyle: "long", timeStyle: "short" })) + "</span></div>";
+    Object.keys(j.fields || {}).forEach(function (f) {
+      info += '<div class="baby-info-row" data-f="' + esc(f) + '"><b>' + esc(f) + "</b><span>" + (j.fields[f] ? esc(j.fields[f]) : '<i style="opacity:.6">Tap to add</i>') + "</span></div>";
+    });
+    $("babyInfo").innerHTML = info;
+    Array.prototype.forEach.call($("babyInfo").children, function (r) {
+      r.onclick = function () {
+        var f = r.getAttribute("data-f");
+        if (!f) { toast("Change her birthday in the Baby book on her phone."); return; }
+        var v = prompt(f, j.fields[f] || ""); if (v === null) return;
+        fetch(bapi("/info", "&field=" + encodeURIComponent(f) + "&value=" + encodeURIComponent(v)), { cache: "no-store" }).then(function () { loadBaby(); });
+      };
+    });
+  }
+  $("babyMore").onclick = function () { babyShowAll = true; renderBaby(); };
+  $("babyAddMonth").onclick = function () { pickPhoto(baby.age.totalMonths); };
+  function pickPhoto(m) { pickMonth = m; $("babyFile").value = ""; $("babyFile").click(); }
+  $("babyFile").onchange = function () {
+    var f = this.files && this.files[0]; if (!f) return;
+    toast("📤 Saving photo…");
+    var img = new Image(), url = URL.createObjectURL(f);
+    img.onload = function () {
+      var s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+      var c = document.createElement("canvas"); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      c.toBlob(function (blob) {
+        fetch(bapi("/photo", "&month=" + pickMonth), { method: "POST", body: blob, headers: { "Content-Type": "image/jpeg" } })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { if (j.error) throw new Error(j.error); toast("📸 Added to " + monthName(pickMonth)); closeFlip(); loadBaby(); })
+          .catch(function (e) { toast(e.message || "Couldn't save that photo."); });
+      }, "image/jpeg", 0.88);
+    };
+    img.onerror = function () { toast("Couldn't read that photo."); };
+    img.src = url;
+  };
+
+  // flip mode: every monthly photo in order, newborn to now
+  var flipMonths = [], flipI = 0, flipPlaying = true, flipFront = true, flipTimer = null, flipSpeed = 1;
+  var flipSpeeds = [[2200, "🐢 Slow"], [1300, "🚶 Normal"], [650, "🐇 Fast"]];
+  function openFlip(startMonth, play) {
+    flipMonths = (baby.photos || []).map(function (p) { return p.month; }).sort(function (x, y) { return x - y; });
+    if (!flipMonths.length) { toast("Add a photo first."); return; }
+    $("flip").classList.remove("hidden");
+    $("flipDots").innerHTML = flipMonths.map(function () { return "<i></i>"; }).join("");
+    flipPlaying = play; $("flipPlay").textContent = play ? "⏸" : "▶";
+    var i = flipMonths.indexOf(startMonth); flipShow(i < 0 ? 0 : i, false); flipRestart();
+  }
+  function closeFlip() { $("flip").classList.add("hidden"); clearTimeout(flipTimer); }
+  function flipSrc(m) { var p = baby.photos.filter(function (x) { return x.month === m; })[0]; return bapi("/photo", "&month=" + m + "&t=" + (p ? p.t : 0)); }
+  function flipShow(i, animate) {
+    flipI = i; var m = flipMonths[i];
+    var inc = flipFront ? $("flipB") : $("flipA"), out = flipFront ? $("flipA") : $("flipB");
+    if (animate) { inc.src = flipSrc(m); inc.style.opacity = 1; out.style.opacity = 0; flipFront = !flipFront; }
+    else { out.src = flipSrc(m); out.style.opacity = 1; inc.style.opacity = 0; }
+    $("flipTitle").textContent = m === 0 ? "Newborn" : monthName(m) + " old";
+    $("flipSub").textContent = monthDate(m).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) + "  ·  " + (i + 1) + " of " + flipMonths.length;
+    Array.prototype.forEach.call($("flipDots").children, function (d, k) { d.classList.toggle("on", k === i); });
+    if (flipMonths.length > 1) { var pre = new Image(); pre.src = flipSrc(flipMonths[(i + 1) % flipMonths.length]); }
+  }
+  function flipRestart() {
+    clearTimeout(flipTimer);
+    if (!flipPlaying || flipMonths.length < 2) return;
+    flipTimer = setTimeout(function () {
+      var n = (flipI + 1) % flipMonths.length; flipShow(n, true);
+      if (n === flipMonths.length - 1) { clearTimeout(flipTimer); flipTimer = setTimeout(flipRestart, flipSpeeds[flipSpeed][0]); } else flipRestart();
+    }, flipSpeeds[flipSpeed][0]);
+  }
+  $("babyFlip").onclick = function () {
+    if (!baby || !(baby.photos || []).length) { toast("Add a photo first."); return; }
+    if (baby.photos.length < 2) toast("Only one photo so far — add more each month!");
+    openFlip(Math.min.apply(null, baby.photos.map(function (p) { return p.month; })), true);
+  };
+  $("flipClose").onclick = closeFlip;
+  $("flipPrev").onclick = function () { flipShow((flipI - 1 + flipMonths.length) % flipMonths.length, true); flipRestart(); };
+  $("flipNext").onclick = function () { flipShow((flipI + 1) % flipMonths.length, true); flipRestart(); };
+  $("flipPlay").onclick = function () { flipPlaying = !flipPlaying; this.textContent = flipPlaying ? "⏸" : "▶"; flipRestart(); };
+  $("flipSpeed").onclick = function () { flipSpeed = (flipSpeed + 1) % flipSpeeds.length; this.textContent = flipSpeeds[flipSpeed][1]; flipRestart(); };
+  $("flipReplace").onclick = function () { pickPhoto(flipMonths[flipI]); };
+  $("flipRemove").onclick = function () {
+    var m = flipMonths[flipI];
+    if (!confirm("Remove the " + monthName(m) + " photo?")) return;
+    fetch(bapi("/photo", "&month=" + m + "&delete=1"), { cache: "no-store" }).then(function () { closeFlip(); loadBaby(); toast("🗑️ Removed"); });
+  };
+
+  // ---------- Touch lock ----------
+  var touchLocked = null, touchSentAt = 0;
+  function paintTouch() {
+    $("touchVal").textContent = touchLocked ? "🔒 Locked" : "👆 She can touch";
+    $("touchBtn").textContent = touchLocked ? "🔓 Unlock touch" : "🔒 Lock touch";
+  }
+  function updateTouch(j) {
+    $("touchBox").classList.toggle("hidden", !j.touch);
+    if (!j.touch || Date.now() - touchSentAt < 2500) return;
+    touchLocked = j.touch === "locked"; paintTouch();
+  }
+  $("touchBtn").onclick = function () {
+    var want = touchLocked ? "unlock" : "lock";
+    touchSentAt = Date.now(); touchLocked = want === "lock"; paintTouch();
+    control("touch", "&value=" + want).then(function () { toast(want === "lock" ? "🔒 Touch locked" : "👆 She can touch the screen"); })
+      .catch(function (e) { touchSentAt = 0; toast(e.message); });
+  };
+
+  // ---------- Remote wake-up ----------
+  function updateSleep(j) {
+    var asleep = j.awake === false;
+    $("sleepBox").classList.toggle("hidden", !asleep);
+    if (asleep) $("sleepMsg").textContent = j.canWake === false
+      ? "😴 Her screen is off. To wake it from here, open Manage → Baby cam on her phone and allow waking up."
+      : "😴 Her screen is off. Wake it, or just pick a video or sleep sound below — it wakes up by itself.";
+    if (asleep && !wasAsleep) $("mode").textContent = "😴 Screen off";
+    wasAsleep = asleep;
+  }
+  var wasAsleep = false;
+  $("wakeBtn").onclick = function () {
+    $("wakeBtn").disabled = true; $("wakeBtn").textContent = "☀️ Waking…";
+    control("wake").then(function () { toast("☀️ Her phone is awake"); })
+      .catch(function (e) { toast(e.message); })
+      .then(function () { $("wakeBtn").disabled = false; $("wakeBtn").textContent = "☀️ Wake her phone"; });
+  };
+
+  // ---------- Remember every way to reach her phone (incl. Tailscale for when you're away) ----------
+  function rememberAddrs(j) {
+    var port = location.port || "8080";
+    if (j.tailscale) {
+      var ts = j.tailscale + ":" + port;
+      store.set("tsAddr", ts);
+      // The Baby Cam app on the home screen lives on a different site, so hand it over once.
+      if (store.get("tsHanded") !== ts && !document.hidden) {
+        store.set("tsHanded", ts);
+        location.replace("https://tdprinting.github.io/avriella-app/?remember=" + encodeURIComponent(ts) + "&back=" + encodeURIComponent(location.href));
+      }
+    }
   }
 
   // ---------- Auto-find: search the home Wi-Fi for her phone ----------
@@ -611,6 +1009,8 @@
     overlay("Looking for her phone on Wi-Fi or your hotspot…", true);
     var byName = location.hostname !== "avriella.local" ? await probe("avriella.local", port) : null;
     if (byName) { found = byName.replace(/^avriella\.local/, "avriella.local"); }
+    var ts = store.get("tsAddr");
+    if (!found && ts && ts.split(":")[0] !== location.hostname) found = await probe(ts.split(":")[0], ts.split(":")[1] || port);
     var subs = found ? [] : subnets();
     outer:
     for (var s = 0; s < subs.length; s++) {

@@ -1,4 +1,7 @@
 <resources>
-    <color name="bg">#FFF6EA</color>
+    <color name="bg">#FFF7EF</color>
     <color name="icon_bg">#7EC8F7</color>
+    <color name="accent">#5878F8</color>
+    <color name="ink">#2A2644</color>
+    <color name="sub">#746F8C</color>
 </resources>

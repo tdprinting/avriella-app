@@ -171,9 +171,18 @@ object Library {
 
     // ---------- persistence ----------
     private fun load() {
-        if (!file.exists()) return
+        val bak = File(file.path + ".bak")
+        // If the main file is missing or damaged, fall back to the last good copy (never start empty by accident).
+        for (f in listOf(file, bak)) {
+            if (!f.exists()) continue
+            if (loadFrom(f)) { if (f === bak) Log.w(TAG, "library restored from backup"); return }
+            videos.clear(); shelves.clear()
+        }
+    }
+
+    private fun loadFrom(f: File): Boolean {
         try {
-            val o = JSONObject(file.readText())
+            val o = JSONObject(f.readText())
             o.optJSONArray("videos")?.let { arr ->
                 for (i in 0 until arr.length()) {
                     val j = arr.getJSONObject(i)
@@ -214,8 +223,10 @@ object Library {
                 settings.lastVideoId = s.optString("lastVideo").ifEmpty { null }
                 settings.lastShelfId = s.optString("lastShelf").ifEmpty { null }
             }
+            return true
         } catch (e: Exception) {
-            Log.e(TAG, "Could not read library", e)
+            Log.e(TAG, "Could not read library " + f.name, e)
+            return false
         }
     }
 
@@ -251,6 +262,8 @@ object Library {
             })
             val tmp = File(file.path + ".tmp")
             tmp.writeText(o.toString())
+            // keep the previous good copy, unless this save would throw away every video
+            if (file.exists() && (videos.isNotEmpty() || !File(file.path + ".bak").exists())) file.copyTo(File(file.path + ".bak"), true)
             if (!tmp.renameTo(file)) {
                 file.delete(); tmp.renameTo(file)
             }
