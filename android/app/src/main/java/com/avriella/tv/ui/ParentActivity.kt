@@ -39,6 +39,8 @@ abstract class ParentActivity : Activity() {
         bar.addView(titleView, lp(0, WRAP, 1f))
         actions = hbox()
         bar.addView(actions, lp(WRAP, WRAP))
+        // flashlight in the corner of every grown-up screen, for finding a binky in the dark
+        if (com.avriella.tv.cam.Torch.available(this)) bar.addView(FlashButton(this), lp(dp(46), dp(46), l = dp(8)))
         root.addView(bar, lp())
         scroll = ScrollView(this).apply { isFillViewport = true; clipToPadding = false }
         body = vbox().apply { setPadding(dp(18), dp(4), dp(18), dp(48)); clipChildren = false; clipToPadding = false }

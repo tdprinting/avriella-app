@@ -156,7 +156,12 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     val body = if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)
                     send(out, 200, "application/json", body.toString().toByteArray())
                 } else denied(out)
-                "/api/stream" -> if (authed) stream(sock, out) else denied(out)
+                "/api/stream" -> if (authed) stream(sock, out, isLocal(sock.inetAddress)) else denied(out)
+                "/api/torch" -> if (authed) {
+                    val want = when (query["on"]) { "1", "true" -> true; "0", "false" -> false; else -> !Torch.on }
+                    val err = Remote.onMain { Torch.set(ctx, want) ?: "" } ?: "busy"
+                    send(out, 200, "application/json", (if (err.isEmpty()) JSONObject().put("ok", true).put("torch", Torch.on) else JSONObject().put("error", err).put("torch", Torch.on)).toString().toByteArray())
+                } else denied(out)
                 // ---- walkie-talkie: a parent's voice message, played out loud ----
                 "/api/talk" -> if (authed) {
                     val ok = parts[0] == "POST" && contentLength in 100..(8 * 1024 * 1024) && run {
@@ -278,7 +283,8 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("viewers", CamState.viewers)
             put("error", cam.error ?: "")
             put("awake", Wake.screenOn)
-            put("fullLock", com.avriella.tv.kid.KidLock.isFullLock(Library.appCtx))
+            put("torch", Torch.on)
+        put("fullLock", com.avriella.tv.kid.KidLock.isFullLock(Library.appCtx))
             put("touch", when (CamState.touchLocked) { true -> "locked"; false -> "unlocked"; null -> "" })
             put("canWake", Wake.canLaunch())
             put("addrs", org.json.JSONArray(Wake.addresses().filter { !it.startsWith("127.") }))
@@ -321,12 +327,23 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
         try {
             val jpg = cam.waitFrame(cam.seq, 4000)
             if (jpg == null) send(out, 503, "application/json", "{\"error\":\"${cam.error ?: "camera starting"}\"}".toByteArray())
-            else send(out, 200, "image/jpeg", jpg)
+            else send(out, 200, "image/jpeg", small(jpg))
         } finally { cam.release() }
     }
 
-    private fun stream(sock: Socket, out: OutputStream) {
-        cam.acquire()
+    /** Snapshots go over the internet relay: if someone at home has the camera in sharp mode, shrink the frame first. */
+    private fun small(jpg: ByteArray): ByteArray {
+        if (jpg.size < 70_000) return jpg
+        return try {
+            val bm = android.graphics.BitmapFactory.decodeByteArray(jpg, 0, jpg.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = 2 })
+            val bos = java.io.ByteArrayOutputStream()
+            bm.compress(android.graphics.Bitmap.CompressFormat.JPEG, 62, bos); bm.recycle()
+            bos.toByteArray()
+        } catch (_: Exception) { jpg }
+    }
+
+    private fun stream(sock: Socket, out: OutputStream, hq: Boolean) {
+        cam.acquire(hq)
         try {
             sock.soTimeout = 0
             val b = "babycamframe"
@@ -344,7 +361,7 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                 out.flush()
             }
         } catch (_: Exception) {
-        } finally { cam.release() }
+        } finally { cam.release(hq) }
     }
 
     private fun asset(out: OutputStream, name: String, type: String) {

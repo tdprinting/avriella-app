@@ -305,6 +305,12 @@
   .call-ctl button.off { background: rgba(255,255,255,.85); color: #222; }
   .call-ctl .end { background: #ff3b5c; font-size: 17px; font-weight: 700; }
 </style>
+<style>
+  .torch { width: 42px; height: 42px; min-height: 0; padding: 0; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.16); color: inherit; display: grid; place-items: center; flex: none; transition: background .25s, color .25s, box-shadow .25s, transform .15s; }
+  .torch:active { transform: scale(.9); }
+  .torch.on { background: #ffd84d; color: #5a3a00; border-color: #ffe48a; box-shadow: 0 0 0 4px rgba(255,216,77,.28), 0 0 22px rgba(255,216,77,.7); }
+  .torch.hidden { display: none; }
+</style>
 </head>
 <body>
 <div class="blobs"><i></i><i></i><i></i><i></i></div>
@@ -313,6 +319,7 @@
   <span class="logo">🧸</span>
   <h1 id="title">Baby Cam</h1>
   <span class="dot" id="dot"></span>
+  <button class="torch hidden" id="torch" aria-label="Turn her phone's flashlight on" title="Flashlight"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9h10l-2 4v8H9v-8z"/><path d="M12 15v1.5"/><path d="M12 2v3M5.5 4l1.6 2.2M18.5 4l-1.6 2.2"/></svg></button>
   <button class="btn-soft hidden" id="logout" style="min-height:38px;padding:6px 14px;font-size:14px">Code</button>
 </header>
 
@@ -575,6 +582,7 @@
   function show(id) {
     ["launcher", "login", "viewer"].forEach(function (s) { $(s).classList.toggle("hidden", s !== id); });
     $("logout").classList.toggle("hidden", id !== "viewer");
+    $("torch").classList.toggle("hidden", id !== "viewer");
   }
 
   // ---------- Hosted on GitHub Pages (https): just help find the phone ----------
@@ -1412,7 +1420,21 @@
     $("touchVal").textContent = touchLocked ? "🔒 Locked" : "👆 She can touch";
     $("touchBtn").textContent = touchLocked ? "🔓 Unlock touch" : "🔒 Lock touch";
   }
+  // ---------- Flashlight on her phone ----------
+  var torchOn = false, torchSentAt = 0;
+  function paintTorch() {
+    $("torch").classList.toggle("on", torchOn);
+    $("torch").setAttribute("aria-label", torchOn ? "Turn her phone's flashlight off" : "Turn her phone's flashlight on");
+  }
+  $("torch").onclick = function () {
+    torchOn = !torchOn; torchSentAt = Date.now(); paintTorch();
+    fetch(api("torch") + "&on=" + (torchOn ? 1 : 0), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      torchOn = !!j.torch; paintTorch();
+      if (j.error) alert(j.error);
+    }).catch(function () { torchOn = !torchOn; paintTorch(); });
+  };
   function updateTouch(j) {
+    if (typeof j.torch === "boolean" && Date.now() - torchSentAt > 2500) { torchOn = j.torch; paintTorch(); }
     $("touchBox").classList.toggle("hidden", !j.touch);
     $("pinWarn").classList.toggle("hidden", j.fullLock !== false);
     if (!j.touch || Date.now() - touchSentAt < 2500) return;
