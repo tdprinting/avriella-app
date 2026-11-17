@@ -411,6 +411,10 @@
   .found small.warn2 { color: var(--sun); }
   .found.on { border-color: var(--peach); background: rgba(255,184,148,.1); }
 
+  .pwrow { position: relative; }
+  .pwrow input { padding-right: 52px; }
+  .pwrow .eye { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 40px; min-height: 0; padding: 0; background: transparent; display: grid; place-items: center; opacity: .6; }
+  .pwrow .eye.on { opacity: 1; color: var(--peach, #ffb38a); }
   /* parent's screen light */
   .lightscreen { position: fixed; inset: 0; z-index: 95; background: #fffaf0; color: #3b3326; display: flex; align-items: flex-end; justify-content: center;
     padding: 0 24px calc(env(safe-area-inset-bottom) + 28px); animation: lighton .35s ease both; cursor: pointer; }
@@ -500,6 +504,7 @@
     <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/></symbol>
     <symbol id="i-ear" viewBox="0 0 24 24"><path d="M7 9a5 5 0 0 1 10 0c0 3-3 4-3 6.5a3.5 3.5 0 0 1-6.3 2"/><path d="M10 9.5a2 2 0 0 1 4 0"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></symbol>
     <symbol id="i-hand" viewBox="0 0 24 24"><path d="M9 12V5.2a1.6 1.6 0 0 1 3.2 0V11M12.2 10.5V4.2a1.6 1.6 0 0 1 3.2 0V11M15.4 10.8V6.2a1.6 1.6 0 0 1 3.2 0v7.3a7.5 7.5 0 0 1-7.5 7.5h-.6a6 6 0 0 1-4.8-2.4l-3.1-4.1a1.6 1.6 0 0 1 2.4-2.1L9 14.5V8.2"/></symbol>
     <symbol id="i-dome" viewBox="0 0 24 24"><circle cx="12" cy="10" r="6.8"/><circle cx="12" cy="10" r="2.6"/><path d="M8.5 20.5h7M12 16.8v3.7"/></symbol>
     <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8l1.6 2.3 2.7-.6.6 2.7 2.3 1.6-1.2 2.5 1.2 2.5-2.3 1.6-.6 2.7-2.7-.6L12 21.2l-1.6-2.3-2.7.6-.6-2.7-2.3-1.6L6 12.7 4.8 10.2l2.3-1.6.6-2.7 2.7.6z"/></symbol>
@@ -809,7 +814,7 @@
     <label class="field" for="camUser">Camera Account username</label>
     <input id="camUser" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="from the Tapo app">
     <label class="field" for="camPass">Camera Account password</label>
-    <input id="camPass" type="password" autocomplete="off" placeholder="••••••••">
+    <div class="pwrow"><input id="camPass" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••••"><button type="button" id="camEye" class="eye" aria-label="Show password"><svg class="i sm"><use href="#i-eye"/></svg></button></div>
     <div class="err" id="camErr"></div>
     <button class="wide btn-main" id="camSave"><svg class="i sm"><use href="#i-check"/></svg>Save camera</button>
     <div class="row" style="margin-top:10px">
@@ -2099,10 +2104,23 @@
     fetch("/api/tapo/save?key=" + encodeURIComponent(code || ""), { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } })
       .then(function (r) { return r.json(); }).then(function (j) {
         if (j.error) throw new Error(j.error);
-        closeCamSheet(); toast((body.name || "Camera") + " saved");
-        return loadTapo().then(function () { selectCam(j.id); if (curTab !== "live") setTab("live", true); });
+        $("camErr").textContent = "Checking the login with the camera…";
+        return fetch(api("tapo/test") + "&id=" + encodeURIComponent(j.id), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (t) {
+          return loadTapo().then(function () {
+            if (t.error) { editCam = tapoCams.filter(function (c) { return c.id === j.id; })[0] || editCam; $("camPass").placeholder = "retype the password"; $("camPass").value = ""; throw new Error(t.error); }
+            $("camErr").textContent = "";
+            closeCamSheet(); toast((body.name || "Camera") + " connected");
+            selectCam(j.id); if (curTab !== "live") setTab("live", true);
+          });
+        });
       }).catch(function (e) { $("camErr").textContent = e.message || "Couldn't save that."; })
       .then(function () { $("camSave").disabled = false; });
+  };
+  $("camEye").onclick = function () {
+    var p = $("camPass"), show = p.type === "password";
+    p.type = show ? "text" : "password";
+    this.setAttribute("aria-label", show ? "Hide password" : "Show password");
+    this.classList.toggle("on", show);
   };
   $("camDelete").onclick = function () {
     if (!editCam || !confirm("Remove " + editCam.name + " from Baby Cam?")) return;

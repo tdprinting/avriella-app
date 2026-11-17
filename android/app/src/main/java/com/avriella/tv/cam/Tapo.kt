@@ -5,8 +5,6 @@ import android.graphics.ImageFormat
 import android.graphics.Rect
 import android.graphics.YuvImage
 import android.media.Image
-import android.media.ImageReader
-import android.media.MediaPlayer
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
@@ -82,6 +80,21 @@ object Tapo {
         return "id:" + c.id
     }
 
+    /** Tries the camera's login right away, so the parent hears about a wrong password while the form is still open. */
+    fun test(id: String?): JSONObject {
+        val c = get(id) ?: return JSONObject().put("error", "No such camera")
+        return try {
+            Rtsp(c.ip, 554, "stream2", c.user, c.pass).check()
+            JSONObject().put("ok", true)
+        } catch (e: Rtsp.AuthFailed) {
+            JSONObject().put("error", "The camera at ${c.ip} didn't accept that Camera Account name or password. Tap the eye to check what you typed. Letters are case-sensitive.").put("auth", true)
+        } catch (e: java.net.ConnectException) {
+            JSONObject().put("error", "Nothing at ${c.ip} is accepting camera logins yet. Make the Camera Account in the Tapo app for this camera, then try again.")
+        } catch (e: Exception) {
+            JSONObject().put("error", "Couldn't reach the camera at ${c.ip} (${e.message ?: e.javaClass.simpleName}).")
+        }
+    }
+
     fun delete(id: String) { stopFeeds(id); write(list().filter { it.id != id }) }
 
     // ---------- finding cameras on the home Wi-Fi ----------
@@ -142,19 +155,18 @@ object Tapo {
         private var viewers = 0
         private val thread = HandlerThread("tapo-" + cam.id).apply { start() }
         private val h = Handler(thread.looper)
-        private var mp: MediaPlayer? = null
-        private var reader: ImageReader? = null
+        @Volatile private var client: Rtsp? = null
+        private var worker: Thread? = null
         private var lastFrame = 0L
-        private val gap = if (hq) 66L else 120L
+        private val gap = if (hq) 50L else 120L
         private val quality = if (hq) 80 else 60
         private val stopLater = Runnable { stop() }
-        private val retry = Runnable { if (viewers > 0) start() }
         private val jpeg = YuvJpeg()
 
         fun acquire() = synchronized(this) {
             viewers++
             h.removeCallbacks(stopLater)
-            if (mp == null) h.post { start() }
+            h.post { start() }
         }
 
         fun release() = synchronized(this) {
@@ -174,75 +186,143 @@ object Tapo {
             return if (seq > after) latest else null
         }
 
-        private fun url(): String {
-            // letters and numbers go in as they are; anything else is %-escaped so it can't break the address
-            fun esc(s: String) = s.map { ch -> if (ch.isLetterOrDigit() || ch in "-._~") ch.toString() else "%" + "%02X".format(ch.code and 0xFF) }.joinToString("")
-            return "rtsp://${esc(cam.user)}:${esc(cam.pass)}@${cam.ip}:554/${if (hq) "stream1" else "stream2"}"
-        }
-
-        private fun newReader(w: Int, ht: Int): ImageReader {
-            val r = ImageReader.newInstance(w, ht, ImageFormat.YUV_420_888, 3)
-            r.setOnImageAvailableListener({ rd ->
-                val img = try { rd.acquireLatestImage() } catch (e: Exception) { Log.w(TAG, "frame", e); null } ?: return@setOnImageAvailableListener
-                try {
-                    val now = SystemClock.uptimeMillis()
-                    if (now - lastFrame >= gap) {
-                        lastFrame = now
-                        val jpg = jpeg.make(img, quality)
-                        error = null
-                        synchronized(lock) { latest = jpg; seq++; lock.notifyAll() }
-                    }
-                } catch (e: Exception) { Log.w(TAG, "jpeg", e) } finally { img.close() }
-            }, h)
-            reader = r
-            return r
-        }
-
         private fun start() {
-            if (mp != null || viewers == 0) return
-            try {
-                val r = newReader(if (hq) 1920 else 640, if (hq) 1080 else 360)
-                val m = MediaPlayer()
-                mp = m
-                m.setVolume(0f, 0f) // her room's sound stays on the camera
-                m.setDataSource(url())
-                m.setSurface(r.surface)
-                m.setOnVideoSizeChangedListener { _, w, ht ->
-                    val cur = reader
-                    if (w > 0 && ht > 0 && cur != null && (w != cur.width || ht != cur.height)) {
-                        val nr = newReader(w, ht)
-                        try { m.setSurface(nr.surface) } catch (e: Exception) { Log.w(TAG, "surface", e) }
-                        h.postDelayed({ try { cur.close() } catch (_: Exception) {} }, 600)
+            if (worker != null || viewers == 0) return
+            val t = Thread({ loop() }, "tapo-rtsp-" + cam.id)
+            worker = t
+            t.start()
+        }
+
+        /** Keeps the camera's video coming while anyone is watching; reconnects after hiccups. */
+        private fun loop() {
+            val me = Thread.currentThread()
+            while (worker === me && viewers > 0) {
+                var wait = 3000L
+                try {
+                    session()
+                } catch (e: Rtsp.AuthFailed) {
+                    error = "${cam.name} didn't accept the Camera Account name or password. Retype them exactly as you made them in the Tapo app (they're case-sensitive)."
+                    Log.w(TAG, "${cam.ip} login refused")
+                    wait = 30_000 // don't hammer the camera with bad logins: it may lock us out
+                } catch (e: Exception) {
+                    if (worker !== me) break
+                    Log.w(TAG, "${cam.ip} video", e)
+                    if (seq == 0L || error != null) error = when (e) {
+                        is java.net.ConnectException, is java.net.SocketTimeoutException, is java.net.NoRouteToHostException ->
+                            "${cam.name} isn't answering at ${cam.ip}. Make sure it's on and on the Wi-Fi."
+                        else -> "${cam.name}'s video stopped (${e.message ?: e.javaClass.simpleName}). Trying again…"
                     }
                 }
-                m.setOnPreparedListener { try { it.start() } catch (_: Exception) {} }
-                m.setOnErrorListener { _, what, extra ->
-                    Log.w(TAG, "${cam.ip} error $what/$extra")
-                    error = "Can't open ${cam.name}. Check that its Camera Account name and password are right and that it's on the Wi-Fi."
-                    stop(); h.removeCallbacks(retry); h.postDelayed(retry, 6000)
-                    true
+                try { Thread.sleep(wait) } catch (_: InterruptedException) { break }
+            }
+        }
+
+        private fun session() {
+            val r = Rtsp(cam.ip, 554, if (hq) "stream1" else "stream2", cam.user, cam.pass)
+            client = r
+            var codec: android.media.MediaCodec? = null
+            var mime = "video/avc"
+            val params = ArrayList<ByteArray>()
+            var gotKey = false
+            val info = android.media.MediaCodec.BufferInfo()
+            var pts = 0L
+            r.onFormat = { m, ps -> mime = m; params.clear(); params.addAll(ps) }
+            fun isParam(t: Int) = if (mime == "video/hevc") t in 32..34 else t == 7 || t == 8
+            fun isKey(t: Int) = if (mime == "video/hevc") t in 16..21 else t == 5
+            fun drain(c: android.media.MediaCodec) {
+                while (true) {
+                    val i = c.dequeueOutputBuffer(info, 0)
+                    if (i < 0) { if (i == android.media.MediaCodec.INFO_TRY_AGAIN_LATER) return else continue }
+                    try {
+                        val now = SystemClock.uptimeMillis()
+                        if (now - lastFrame >= gap) {
+                            val img = c.getOutputImage(i)
+                            if (img != null) {
+                                lastFrame = now
+                                try {
+                                    val jpg = jpeg.make(img, quality)
+                                    error = null
+                                    synchronized(lock) { latest = jpg; seq++; lock.notifyAll() }
+                                } finally { img.close() }
+                            }
+                        }
+                    } catch (e: Exception) { Log.w(TAG, "jpeg", e) }
+                    c.releaseOutputBuffer(i, false)
                 }
-                m.setOnCompletionListener { stop(); h.postDelayed(retry, 1500) }
-                m.prepareAsync()
-                // no picture after a while: try again from scratch
-                h.postDelayed({ if (mp === m && seq == 0L && viewers > 0) { error = error ?: "${cam.name} isn't answering yet…"; stop(); start() } }, 15_000)
-            } catch (e: Exception) {
-                Log.w(TAG, "start", e)
-                error = "Can't open ${cam.name}: ${e.message}"
-                stop(); h.postDelayed(retry, 6000)
+            }
+            r.onFrame = frame@{ au, types ->
+                if (codec == null) {
+                    // in-band parameter sets win over the description's
+                    if (types.any { isParam(it) }) { params.clear(); splitNals(au).filter { isParam(nalType(it, mime)) }.forEach { params += it } }
+                    if (!types.any { isKey(it) }) return@frame
+                    if (params.isEmpty()) return@frame
+                    val f = android.media.MediaFormat.createVideoFormat(mime, if (hq) 1920 else 640, if (hq) 1080 else 360)
+                    f.setInteger(android.media.MediaFormat.KEY_COLOR_FORMAT, android.media.MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible)
+                    fun annexB(l: List<ByteArray>): java.nio.ByteBuffer {
+                        val csd = java.io.ByteArrayOutputStream()
+                        l.forEach { csd.write(byteArrayOf(0, 0, 0, 1)); csd.write(it) }
+                        return java.nio.ByteBuffer.wrap(csd.toByteArray())
+                    }
+                    if (mime == "video/hevc") f.setByteBuffer("csd-0", annexB(params))
+                    else {
+                        val sps = params.filter { nalType(it, mime) == 7 }; val pps = params.filter { nalType(it, mime) == 8 }
+                        if (sps.isEmpty() || pps.isEmpty()) return@frame
+                        f.setByteBuffer("csd-0", annexB(sps.take(1))); f.setByteBuffer("csd-1", annexB(pps.take(1)))
+                    }
+                    val c = android.media.MediaCodec.createDecoderByType(mime)
+                    c.configure(f, null, null, 0)
+                    c.start()
+                    codec = c
+                    Log.i(TAG, "${cam.ip} decoding $mime")
+                }
+                val c = codec!!
+                if (!gotKey) { if (types.any { isKey(it) }) gotKey = true else return@frame }
+                drain(c)
+                val i = c.dequeueInputBuffer(20_000)
+                if (i >= 0) {
+                    val ib = c.getInputBuffer(i)!!
+                    ib.clear()
+                    if (au.size <= ib.capacity()) {
+                        ib.put(au)
+                        pts += 66_000
+                        c.queueInputBuffer(i, 0, au.size, pts, 0)
+                    } else c.queueInputBuffer(i, 0, 0, pts, 0)
+                }
+                drain(c)
+            }
+            try { r.run() } finally {
+                client = null
+                r.close()
+                try { codec?.stop() } catch (_: Exception) {}
+                try { codec?.release() } catch (_: Exception) {}
             }
         }
 
         private fun stop() {
-            val m = mp; mp = null
-            try { m?.reset() } catch (_: Exception) {}
-            try { m?.release() } catch (_: Exception) {}
-            try { reader?.close() } catch (_: Exception) {}
-            reader = null
+            worker = null
+            client?.close()
         }
 
         fun shutdown() { h.removeCallbacksAndMessages(null); h.post { stop(); thread.quitSafely() } }
     }
+
+    /** Splits an Annex-B frame (00 00 00 01 start codes) into its NAL units. */
+    internal fun splitNals(b: ByteArray): List<ByteArray> {
+        val out = ArrayList<ByteArray>()
+        var start = -1
+        var i = 0
+        while (i + 3 < b.size) {
+            if (b[i].toInt() == 0 && b[i + 1].toInt() == 0 && b[i + 2].toInt() == 0 && b[i + 3].toInt() == 1) {
+                if (start >= 0) out += b.copyOfRange(start, i)
+                start = i + 4; i += 4
+            } else i++
+        }
+        if (start in 0 until b.size) out += b.copyOfRange(start, b.size)
+        return out
+    }
+
+    internal fun nalType(n: ByteArray, mime: String) =
+        if (n.isEmpty()) -1 else if (mime == "video/hevc") (n[0].toInt() shr 1) and 0x3f else n[0].toInt() and 0x1f
 }
 
 /** Turns a camera/decoder frame (YUV_420_888) into a JPEG, reusing its buffers between frames. */

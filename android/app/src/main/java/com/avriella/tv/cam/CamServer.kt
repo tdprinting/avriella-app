@@ -170,6 +170,7 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     send(out, 200, "application/json", (if (res.startsWith("id:")) JSONObject().put("ok", true).put("id", res.drop(3)) else JSONObject().put("error", res.removePrefix("error:"))).toString().toByteArray())
                 } else denied(out)
                 "/api/tapo/delete" -> if (authed) { Tapo.delete(query["id"] ?: ""); send(out, 200, "application/json", "{\"ok\":true}".toByteArray()) } else denied(out)
+                "/api/tapo/test" -> if (authed) send(out, 200, "application/json", Tapo.test(query["id"]).toString().toByteArray()) else denied(out)
                 "/api/tapo/snap" -> if (authed) tapoSnap(out, query["id"]) else denied(out)
                 "/api/tapo/stream" -> if (authed) tapoStream(sock, out, query["id"], isLocal(sock.inetAddress)) else denied(out)
                 "/api/torch" -> if (authed) {
