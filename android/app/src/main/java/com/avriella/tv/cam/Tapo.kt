@@ -161,7 +161,7 @@ object Tapo {
         /** When the camera last refused the login: no more tries for a while (a Tapo locks out repeated bad logins). */
         @Volatile private var refusedAt = 0L
         private val gap = if (hq) 50L else 120L
-        private val quality = if (hq) 80 else 60
+        private val quality = if (hq) 78 else 60
         private val stopLater = Runnable { stop() }
         private val jpeg = YuvJpeg()
 
@@ -330,32 +330,48 @@ object Tapo {
         if (n.isEmpty()) -1 else if (mime == "video/hevc") (n[0].toInt() shr 1) and 0x3f else n[0].toInt() and 0x1f
 }
 
-/** Turns a camera/decoder frame (YUV_420_888) into a JPEG, reusing its buffers between frames. */
-class YuvJpeg {
+/**
+ * Turns a camera/decoder frame (YUV_420_888) into a JPEG, reusing its buffers between frames.
+ * Frames wider than [maxW] are shrunk by half first (every other pixel): a 3 MP Tapo picture becomes
+ * 1152x648, about a quarter of the data, and encodes four times faster.
+ */
+class YuvJpeg(private val maxW: Int = 1600) {
     private var nv = ByteArray(0)
+    private var row = ByteArray(0)
     private var uArr = ByteArray(0)
     private var vArr = ByteArray(0)
 
     fun make(img: Image, quality: Int): ByteArray {
-        val w = img.width and 1.inv(); val h = img.height and 1.inv()
+        val s = if (img.width > maxW) 2 else 1
+        val w = (img.width / s) and 1.inv(); val h = (img.height / s) and 1.inv()
         if (nv.size != w * h * 3 / 2) nv = ByteArray(w * h * 3 / 2)
         val out = nv
         val yP = img.planes[0]; val uP = img.planes[1]; val vP = img.planes[2]
         val yb = yP.buffer; val ys = yP.rowStride
-        for (row in 0 until h) { yb.position(row * ys); yb.get(out, row * w, w) }
+        if (s == 1) {
+            for (r in 0 until h) { yb.position(r * ys); yb.get(out, r * w, w) }
+        } else {
+            val need = w * 2
+            if (row.size < need) row = ByteArray(need)
+            for (r in 0 until h) {
+                yb.position(r * 2 * ys); yb.get(row, 0, minOf(need, yb.remaining()))
+                val o = r * w
+                for (c in 0 until w) out[o + c] = row[c * 2]
+            }
+        }
         val ub = uP.buffer; val vb = vP.buffer
         ub.position(0); vb.position(0)
         val un = ub.remaining(); val vn = vb.remaining()
         if (uArr.size < un) uArr = ByteArray(un)
         if (vArr.size < vn) vArr = ByteArray(vn)
         ub.get(uArr, 0, un); vb.get(vArr, 0, vn)
-        val urs = uP.rowStride; val ups = uP.pixelStride
-        val vrs = vP.rowStride; val vps = vP.pixelStride
+        val urs = uP.rowStride * s; val ups = uP.pixelStride * s
+        val vrs = vP.rowStride * s; val vps = vP.pixelStride * s
         var o = w * h
-        for (row in 0 until h / 2) {
-            val vr = row * vrs; val ur = row * urs
-            for (col in 0 until w / 2) {
-                val vi = vr + col * vps; val ui = ur + col * ups
+        for (r in 0 until h / 2) {
+            val vr = r * vrs; val ur = r * urs
+            for (c in 0 until w / 2) {
+                val vi = vr + c * vps; val ui = ur + c * ups
                 out[o++] = if (vi < vn) vArr[vi] else 0x80.toByte()
                 out[o++] = if (ui < un) uArr[ui] else 0x80.toByte()
             }
