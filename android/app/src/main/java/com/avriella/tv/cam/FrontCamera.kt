@@ -171,6 +171,7 @@ class FrontCamera(private val ctx: Context) {
                     if (now - lastFrame >= gap) {
                         lastFrame = now
                         val jpg = toJpeg(img, quality)
+                        if (error != null) error = null // pictures are flowing, so any old hiccup message is out of date
                         synchronized(lock) { latest = jpg; seq++; lock.notifyAll() }
                     }
                 } catch (e: Exception) {
@@ -191,12 +192,13 @@ class FrontCamera(private val ctx: Context) {
                     @Suppress("DEPRECATION")
                     cd.createCaptureSession(listOf(r.surface), object : CameraCaptureSession.StateCallback() {
                         override fun onConfigured(s: CameraCaptureSession) {
+                            if (device !== cd) { try { s.close() } catch (_: Exception) {}; return } // an older camera we already closed
                             session = s
                             try {
                                 s.setRepeatingRequest(request(cd, r), null, handler)
                             } catch (e: Exception) { error = "Camera error: ${e.message}" }
                         }
-                        override fun onConfigureFailed(s: CameraCaptureSession) { error = "Camera could not start" }
+                        override fun onConfigureFailed(s: CameraCaptureSession) { if (device === cd) error = "Camera could not start" }
                     }, handler)
                     } catch (e: Exception) {
                         Log.w("FrontCamera", "camera taken while starting", e)
@@ -205,8 +207,8 @@ class FrontCamera(private val ctx: Context) {
                         handler?.postDelayed({ if (viewers > 0 && device == null) openCamera() }, 3000)
                     }
                 }
-                override fun onDisconnected(cd: CameraDevice) { cd.close(); device = null; holdsBack = false; error = "Camera was taken by another app" }
-                override fun onError(cd: CameraDevice, e: Int) { cd.close(); device = null; holdsBack = false; error = "Camera error $e" }
+                override fun onDisconnected(cd: CameraDevice) { cd.close(); if (device !== cd && device != null) return; device = null; holdsBack = false; error = "Camera was taken by another app" }
+                override fun onError(cd: CameraDevice, e: Int) { cd.close(); if (device !== cd && device != null) return; device = null; holdsBack = false; error = "Camera error $e" }
             }, handler)
         } catch (e: SecurityException) {
             error = "Camera permission is off"
