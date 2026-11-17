@@ -70,7 +70,7 @@ object Tapo {
         val cams = list().toMutableList()
         val old = cams.firstOrNull { it.id == j.optString("id") }
         val user = j.optString("user").trim()
-        val pass = j.optString("pass").ifEmpty { old?.pass ?: "" }
+        val pass = j.optString("pass").trim().ifEmpty { old?.pass ?: "" }
         if (user.isEmpty() || pass.isEmpty()) return "error:Type the Camera Account name and password you made in the Tapo app."
         val c = old ?: Cam(UUID.randomUUID().toString().replace("-", "").take(10), name, ip, user, pass).also { cams.add(it) }
         c.name = name; c.ip = ip; c.user = user; c.pass = pass
@@ -158,6 +158,8 @@ object Tapo {
         @Volatile private var client: Rtsp? = null
         private var worker: Thread? = null
         private var lastFrame = 0L
+        /** When the camera last refused the login: no more tries for a while (a Tapo locks out repeated bad logins). */
+        @Volatile private var refusedAt = 0L
         private val gap = if (hq) 50L else 120L
         private val quality = if (hq) 80 else 60
         private val stopLater = Runnable { stop() }
@@ -188,6 +190,7 @@ object Tapo {
 
         private fun start() {
             if (worker != null || viewers == 0) return
+            if (refusedAt > 0 && SystemClock.uptimeMillis() - refusedAt < 10 * 60_000) return
             val t = Thread({ loop() }, "tapo-rtsp-" + cam.id)
             worker = t
             t.start()
@@ -203,7 +206,8 @@ object Tapo {
                 } catch (e: Rtsp.AuthFailed) {
                     error = "${cam.name} didn't accept the Camera Account name or password. Retype them exactly as you made them in the Tapo app (they're case-sensitive)."
                     Log.w(TAG, "${cam.ip} login refused")
-                    wait = 30_000 // don't hammer the camera with bad logins: it may lock us out
+                    refusedAt = SystemClock.uptimeMillis()
+                    break // stop until the login is saved again (or 10 minutes pass): retries would keep the camera locked
                 } catch (e: Exception) {
                     if (worker !== me) break
                     Log.w(TAG, "${cam.ip} video", e)
@@ -215,6 +219,7 @@ object Tapo {
                 }
                 try { Thread.sleep(wait) } catch (_: InterruptedException) { break }
             }
+            synchronized(this) { if (worker === me) worker = null }
         }
 
         private fun session() {
