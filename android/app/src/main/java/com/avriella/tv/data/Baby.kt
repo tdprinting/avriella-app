@@ -53,8 +53,11 @@ object Baby {
         if (loaded) return
         loaded = true
         try {
-            if (!file.exists()) return
-            val j = JSONObject(file.readText())
+            // after a power cut the file can come back empty or as zeros: then use the last good copy
+            val bak = File(file.path + ".bak")
+            val src = listOf(file, bak).firstOrNull { f -> try { f.exists() && JSONObject(f.readText()).has("entries") } catch (_: Exception) { false } } ?: return
+            if (src === bak) android.util.Log.w("AvriellaBaby", "log restored from backup")
+            val j = JSONObject(src.readText())
             j.optJSONObject("info")?.let { i ->
                 info.birth = i.optLong("birth", info.birth)
                 i.optJSONObject("fields")?.let { f -> f.keys().forEach { k -> info.fields[k] = f.optString(k) } }
@@ -71,7 +74,18 @@ object Baby {
         val f = JSONObject(); info.fields.forEach { (k, v) -> f.put(k, v) }
         val a = JSONArray(); entries.forEach { a.put(it.json()) }
         val j = JSONObject().put("info", JSONObject().put("birth", info.birth).put("fields", f)).put("entries", a)
-        val tmp = File(file.path + ".tmp"); tmp.writeText(j.toString()); tmp.renameTo(file)
+        try {
+            // keep the last good copy, then write the new one all the way to storage before swapping it in
+            val ok = try { file.exists() && JSONObject(file.readText()).has("entries") } catch (_: Exception) { false }
+            if (ok) write(File(file.path + ".bak"), file.readBytes())
+            write(file, j.toString().toByteArray())
+        } catch (e: Exception) { android.util.Log.e("AvriellaBaby", "couldn't save the log", e) }
+    }
+
+    private fun write(f: File, bytes: ByteArray) {
+        val tmp = File(f.path + ".tmp")
+        java.io.FileOutputStream(tmp).use { it.write(bytes); it.flush(); it.fd.sync() }
+        if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
     }
 
     @Synchronized fun add(kind: String, time: Long = System.currentTimeMillis(), note: String = "", by: String = ""): Entry {

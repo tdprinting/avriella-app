@@ -71,11 +71,13 @@ object Library {
         appCtx = ctx.applicationContext
         file = File(appCtx.filesDir, "library.json")
         load()
+        restoreConnection()
         if (settings.camCode.isEmpty()) {
             settings.camCode = (100000..999999).random().toString()
             save()
         }
         if (settings.relaySecret.isEmpty()) { settings.relaySecret = com.avriella.tv.cam.RelayClient.newSecret(); save() }
+        if (!conn().contains("camCode")) saveConnection() // first run with the separate copy: make it now
     }
 
     fun newId(): String = UUID.randomUUID().toString().replace("-", "").take(16)
@@ -172,10 +174,56 @@ object Library {
     }
 
     // ---------- persistence ----------
+    /*
+     * Her phone can lose power at any moment (the battery runs flat). Saves therefore:
+     *  - write a new file, force it onto storage (fsync), then swap it in, so a file is either old or new, never half;
+     *  - keep the last two good copies (.bak, .bak2), only ever made from files that read back correctly;
+     *  - mirror the iPhone-connection settings in a separate store, so pairing survives even if every copy is lost.
+     */
+    private fun conn() = appCtx.getSharedPreferences("connection", Context.MODE_PRIVATE)
+
+    /** Puts back the iPhone connection (on/off, cam code, internet pairing key) from its separate copy. */
+    private fun restoreConnection() {
+        val p = conn()
+        if (!p.contains("camCode")) return
+        val before = Triple(settings.camEnabled, settings.camCode, settings.relaySecret)
+        settings.camEnabled = p.getBoolean("camEnabled", settings.camEnabled)
+        settings.camCode = p.getString("camCode", null)?.ifEmpty { null } ?: settings.camCode
+        settings.camRequireCode = p.getBoolean("camRequireCode", settings.camRequireCode)
+        settings.relaySecret = p.getString("relaySecret", null)?.ifEmpty { null } ?: settings.relaySecret
+        p.getString("childName", null)?.ifEmpty { null }?.let { settings.childName = it }
+        if (before != Triple(settings.camEnabled, settings.camCode, settings.relaySecret)) {
+            Log.w(TAG, "iPhone connection settings restored from their separate copy")
+            save()
+        }
+    }
+
+    private fun saveConnection() {
+        try {
+            conn().edit()
+                .putBoolean("camEnabled", settings.camEnabled).putString("camCode", settings.camCode)
+                .putBoolean("camRequireCode", settings.camRequireCode).putString("relaySecret", settings.relaySecret)
+                .putString("childName", settings.childName)
+                .commit() // commit (not apply): written and synced before we go on
+        } catch (e: Exception) { Log.e(TAG, "Could not save connection settings", e) }
+    }
+
+    private fun durableWrite(f: File, bytes: ByteArray) {
+        val tmp = File(f.path + ".tmp")
+        java.io.FileOutputStream(tmp).use { out -> out.write(bytes); out.flush(); out.fd.sync() }
+        if (!tmp.renameTo(f)) { f.delete(); if (!tmp.renameTo(f)) throw java.io.IOException("rename failed") }
+    }
+
+    /** True if the file holds a readable library (not empty, not zeros after a power cut). */
+    private fun readable(f: File): Boolean = try {
+        f.exists() && f.length() > 2 && JSONObject(f.readText()).has("settings")
+    } catch (_: Exception) { false }
+
     private fun load() {
         val bak = File(file.path + ".bak")
-        // If the main file is missing or damaged, fall back to the last good copy (never start empty by accident).
-        for (f in listOf(file, bak)) {
+        val bak2 = File(file.path + ".bak2")
+        // If the main file is missing or damaged, fall back to the last good copies (never start empty by accident).
+        for (f in listOf(file, bak, bak2)) {
             if (!f.exists()) continue
             if (loadFrom(f)) { if (f === bak) Log.w(TAG, "library restored from backup"); return }
             videos.clear(); shelves.clear()
@@ -264,13 +312,15 @@ object Library {
                 put("relaySecret", settings.relaySecret)
                 put("lastVideo", settings.lastVideoId ?: ""); put("lastShelf", settings.lastShelfId ?: "")
             })
-            val tmp = File(file.path + ".tmp")
-            tmp.writeText(o.toString())
-            // keep the previous good copy, unless this save would throw away every video
-            if (file.exists() && (videos.isNotEmpty() || !File(file.path + ".bak").exists())) file.copyTo(File(file.path + ".bak"), true)
-            if (!tmp.renameTo(file)) {
-                file.delete(); tmp.renameTo(file)
+            val bak = File(file.path + ".bak")
+            val bak2 = File(file.path + ".bak2")
+            // keep the previous good copies (only ones that read back fine), unless this save would throw away every video
+            if (readable(file) && (videos.isNotEmpty() || !readable(bak))) {
+                if (readable(bak)) durableWrite(bak2, bak.readBytes())
+                durableWrite(bak, file.readBytes())
             }
+            durableWrite(file, o.toString().toByteArray())
+            saveConnection()
         } catch (e: Exception) {
             Log.e(TAG, "Could not save library", e)
         }

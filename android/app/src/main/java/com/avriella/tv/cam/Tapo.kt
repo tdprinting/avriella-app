@@ -46,7 +46,7 @@ object Tapo {
     @Synchronized private fun write(cams: List<Cam>) {
         val a = JSONArray()
         cams.forEach { a.put(JSONObject().put("id", it.id).put("name", it.name).put("ip", it.ip).put("user", it.user).put("pass", it.pass)) }
-        prefs().edit().putString("cams", a.toString()).apply()
+        prefs().edit().putString("cams", a.toString()).commit()
     }
 
     fun get(id: String?): Cam? = list().firstOrNull { it.id == id }

@@ -40,6 +40,7 @@ class App : Application() {
         super.onCreate()
         Library.init(this)
         Thread { Sounds.init(this) }.start()
+        com.avriella.tv.cam.KeeperJob.schedule(this)
         try { PhotoReminder.schedule(this) } catch (e: Exception) { android.util.Log.w("AvriellaBaby", "couldn't schedule photo reminder", e) }
         // The iPhone connection stays up all the time (screen off and asleep too), so parents can
         // check in and wake her phone up from anywhere. It only stops if they turn it off.

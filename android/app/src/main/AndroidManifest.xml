@@ -82,6 +82,19 @@
 
         <receiver android:name=".PhotoReminder$Receiver" android:exported="false" />
 
+        <service
+            android:name=".cam.KeeperJob"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
+        <activity
+            android:name=".cam.WakeStarter"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <receiver
             android:name=".cam.BootReceiver"
             android:exported="true">
