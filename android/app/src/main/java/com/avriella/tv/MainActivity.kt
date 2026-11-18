@@ -32,6 +32,14 @@ import com.avriella.tv.ui.pill
 import com.avriella.tv.ui.pressable
 import com.avriella.tv.ui.rounded
 import com.avriella.tv.ui.section
+import com.avriella.tv.ui.PupView
+import com.avriella.tv.ui.toyBackground
+import com.avriella.tv.ui.popIn
+import com.avriella.tv.ui.breathe
+import com.avriella.tv.ui.lift
+import com.avriella.tv.ui.pressScale
+import com.avriella.tv.ui.blend
+import com.avriella.tv.ui.CHUNKY
 import com.avriella.tv.ui.toast
 import com.avriella.tv.ui.vbox
 
@@ -129,9 +137,10 @@ class MainActivity : ParentActivity() {
 
     override fun build() {
         val s = Library.settings
-        titleView.text = "🌈 ${s.childName}'s TV"
-        body.addView(label("Tap ▶ on anything and it starts locked. To come back here, hold BOTH volume buttons for 1 second.", 14f, Pal.SUB).apply {
-            setPadding(dp(4), 0, dp(4), dp(6))
+        titleView.text = ""
+        body.addView(hero(s.childName), lp(t = dp(2)))
+        body.addView(label("Tap ▶ on anything and it starts locked. To come back here, hold BOTH volume buttons for 1 second.", 13f, Pal.SUB).apply {
+            setPadding(dp(8), dp(10), dp(8), dp(2))
         })
 
         if (Library.videos.isEmpty()) {
@@ -144,34 +153,34 @@ class MainActivity : ParentActivity() {
             continueCard()?.let { body.addView(it, lp(t = dp(12))) }
 
             val shows = Library.shows()
-            body.addView(section("📺  Shows"))
+            body.addView(badge("📺", "Shows", Pal.BLUE))
             if (shows.isEmpty()) body.addView(hintCard("Make a show (like \"Bluey\") in Manage to sort her videos."))
             else body.addView(grid(shows.map { shelfTile(it) }))
 
             val pls = Library.playlists()
-            body.addView(section("🎵  Playlists"))
+            body.addView(badge("🎵", "Playlists", Pal.PURPLE))
             if (pls.isEmpty()) body.addView(hintCard("Playlists are your own mixes that auto-play in order. Make one in Manage → New playlist."))
             else body.addView(grid(pls.map { shelfTile(it) }))
 
-            body.addView(pill("🎞️  All videos (${Library.videos.size})", Pal.CARD, Pal.INK) {
+            body.addView(pill("🎞️  All videos (${Library.videos.size})", Pal.ORANGE, Color.WHITE, 17f) {
                 startActivity(Intent(this, ShelfActivity::class.java).putExtra("shelf", Library.ALL))
             }, lp(MATCH, WRAP, t = dp(14)))
         }
 
-        body.addView(section("🎮  Baby games"))
+        body.addView(badge("🎮", "Games", Pal.GREEN))
         body.addView(grid(GAMES.map { g ->
             tile(g.name, g.blurb, g.color, g.emoji, null, onOpen = { GameActivity.start(this, g.id) }, onPlay = { GameActivity.start(this, g.id) })
         }))
 
-        body.addView(section("😴  Sleep sounds"))
+        body.addView(badge("🌙", "Sleep sounds", 0xFF4B4FB8.toInt()))
         body.addView(label("Calm sounds with a dark, dimmed screen for naps and bedtime.", 14f, Pal.SUB).apply { setPadding(dp(4), 0, dp(4), dp(6)) })
         body.addView(grid(com.avriella.tv.sleep.SLEEP_SOUNDS.map { s ->
-            tile(s.name, "Tap to start", 0xFF3B3D8F.toInt(), s.emoji, null,
+            tile(s.name, "Tap to start", 0xFF4B4FB8.toInt(), s.emoji, null,
                 onOpen = { com.avriella.tv.kid.SleepSoundsActivity.start(this, s.id) },
                 onPlay = { com.avriella.tv.kid.SleepSoundsActivity.start(this, s.id) })
         }))
 
-        body.addView(section("🛡️  Safety"))
+        body.addView(badge("🛡️", "Safety", Pal.ORANGE))
         val full = KidLock.isFullLock(this)
         body.addView(statusRow(
             if (full) "🔒  Full lock is ON" else "⚠️  Basic lock (tap to set up Full Lock)",
@@ -202,8 +211,8 @@ class MainActivity : ParentActivity() {
         val c = card(14)
         c.background = android.graphics.drawable.GradientDrawable(
             android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-            intArrayOf(0xFF8B5CF6.toInt(), 0xFFF2557A.toInt(), 0xFFFF9A3C.toInt()),
-        ).apply { cornerRadius = dpf(26f) }
+            intArrayOf(0xFF3D86F0.toInt(), 0xFF5AA8FF.toInt(), 0xFFFF9A3D.toInt()),
+        ).apply { cornerRadius = dpf(28f) }
         c.elevation = dpf(6f)
         val row = hbox()
         val a = art(Pal.ORANGE, "▶", v, 0.6f, 14f, 28f)
@@ -215,7 +224,9 @@ class MainActivity : ParentActivity() {
         col.addView(ProgressLine(this, v.progress, 0xFFFFE14D.toInt(), 0x44FFFFFF), lp(MATCH, dp(6), t = dp(8)))
         row.addView(col, lp(0, WRAP, 1f))
         c.addView(row)
-        c.addView(pill("▶  Play for ${Library.settings.childName}", 0x40FFFFFF, android.graphics.Color.WHITE, 18f) { PlayerActivity.start(this, shelfId, v.id) }, lp(MATCH, WRAP, t = dp(12)))
+        val go = pill("▶  Play for ${Library.settings.childName}", Pal.YELLOW, Pal.INK, 19f) { PlayerActivity.start(this, shelfId, v.id) }
+        go.breathe(0.03f)
+        c.addView(go, lp(MATCH, WRAP, t = dp(12)))
         return c
     }
 
@@ -230,23 +241,67 @@ class MainActivity : ParentActivity() {
 
     private fun tile(title: String, sub: String, color: Int, emoji: String, thumb: com.avriella.tv.data.Video?, onOpen: () -> Unit, onPlay: (() -> Unit)?): View {
         val c = vbox()
-        val r = dpf(20f)
-        c.background = pressable(rounded(Pal.CARD, r, dp(1.5f), Pal.EDGE), r)
-        c.setPadding(dp(8), dp(8), dp(8), dp(12))
+        val r = dpf(24f)
+        c.background = pressable(toyBackground(color, r, depth = dp(6)), r, 0x40FFFFFF)
+        c.lift(dpf(5f), color)
+        c.setPadding(dp(8), dp(8), dp(8), dp(16))
         c.setOnClickListener { onOpen() }
-        val a = art(color, emoji, thumb, 0.62f, 16f, 44f)
+        val a = art(blend(color, Color.WHITE, 0.25f), emoji, thumb, 0.62f, 18f, 46f)
         if (onPlay != null) {
-            val play = label("▶", 20f, Pal.INK, true).apply {
+            val play = label("▶", 20f, color, true).apply {
                 gravity = Gravity.CENTER
-                background = rounded(Color.WHITE, dpf(24f))
-                elevation = dpf(3f)
+                background = rounded(Color.WHITE, dpf(24f), dp(3), Pal.YELLOW)
+                elevation = dpf(4f)
+                pressScale(0.85f)
                 setOnClickListener { onPlay() }
             }
             a.addView(play, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(8), dp(8)) })
         }
         c.addView(a, lp(MATCH, WRAP))
-        c.addView(label(title, 16f, Pal.INK, true, 2).apply { setPadding(dp(4), dp(8), dp(4), 0) })
-        c.addView(label(sub, 13f, Pal.SUB, lines = 2).apply { setPadding(dp(4), dp(2), dp(4), 0) })
+        c.addView(label(title, 17f, Color.WHITE, true, 2).apply {
+            setPadding(dp(6), dp(9), dp(6), 0); typeface = CHUNKY
+            setShadowLayer(dpf(3f), 0f, dpf(1f), 0x55000000)
+        })
+        c.addView(label(sub, 13f, 0xEEFFFFFF.toInt(), lines = 2).apply { setPadding(dp(6), dp(2), dp(6), 0) })
         return c
+    }
+
+    /** Big friendly header: the puppy mascot waving hello next to her name. */
+    private fun hero(name: String): View {
+        val c = vbox()
+        val r = dpf(30f)
+        c.background = toyBackground(Pal.CARD, r, 0xFFBFD8F2.toInt(), dp(6))
+        c.lift(dpf(6f))
+        c.setPadding(dp(14), dp(12), dp(16), dp(18))
+        val row = hbox()
+        val pup = PupView(this)
+        row.addView(pup, lp(dp(104), dp(104)))
+        val col = vbox()
+        val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+        val hi = when (hour) { in 5..11 -> "Good morning"; in 12..16 -> "Good afternoon"; in 17..20 -> "Good evening"; else -> "Sleepy time" }
+        col.addView(label("$hi,", 15f, Pal.SUB, true))
+        col.addView(label(name + "!", 32f, Pal.BLUE, true, 1).apply { typeface = CHUNKY; letterSpacing = -0.02f })
+        // a row of little colored dots, like confetti
+        val dots = hbox()
+        intArrayOf(Pal.ORANGE, Pal.YELLOW, Pal.GREEN, Pal.TILE[3], Pal.PURPLE).forEach { col2 ->
+            dots.addView(View(this).apply { background = rounded(col2, dpf(5f)) }, lp(dp(10), dp(10), r = dp(6)))
+        }
+        col.addView(dots, lp(WRAP, WRAP, t = dp(8)))
+        row.addView(col, lp(0, WRAP, 1f, l = dp(10)))
+        c.addView(row)
+        c.popIn()
+        return c
+    }
+
+    /** Section title with its emoji in a bright round badge. */
+    private fun badge(emoji: String, title: String, color: Int): View {
+        val row = hbox().apply { setPadding(dp(4), dp(26), dp(4), dp(8)) }
+        row.addView(label(emoji, 20f).apply {
+            gravity = Gravity.CENTER
+            background = toyBackground(color, dpf(22f), depth = dp(3))
+            setPadding(0, 0, 0, dp(3))
+        }, lp(dp(44), dp(44), r = dp(10)))
+        row.addView(label(title, 24f, Pal.INK, true).apply { typeface = CHUNKY; setShadowLayer(dpf(6f), 0f, dpf(1f), 0xCCFFFFFF.toInt()) }, lp(WRAP, WRAP))
+        return row
     }
 }

@@ -41,25 +41,27 @@ import com.avriella.tv.data.Thumbs
 import com.avriella.tv.data.Video
 
 object Pal {
-    const val BG = 0xFFFFF7EF.toInt()
-    const val CARD = 0xFFFFFEFC.toInt()   // warm white, opaque so cards can cast a soft shadow
+    // "Sunny backyard": sky blue + sunny orange, bright and cheerful for a little one
+    const val BG = 0xFFE6F6FF.toInt()
+    const val CARD = 0xFFFFFDF7.toInt()   // creamy white, opaque so cards can cast a soft shadow
     const val EDGE = 0xFFFFFFFF.toInt()
-    const val INK = 0xFF2A2644.toInt()
-    const val SUB = 0xFF746F8C.toInt()
-    const val LINE = 0xFFF0E7DC.toInt()
-    const val BLUE = 0xFF5878F8.toInt()   // the app's accent: a soft periwinkle
-    const val ORANGE = 0xFFFF8F4A.toInt()
-    const val GREEN = 0xFF22A866.toInt()
-    const val RED = 0xFFE8505B.toInt()
-    const val PURPLE = 0xFF8E63F7.toInt()
-    const val SOFT_BLUE = 0xFFE8EEFF.toInt()
-    const val SOFT_ORANGE = 0xFFFFEDDF.toInt()
-    const val SOFT_GREEN = 0xFFE1F6EA.toInt()
-    /** Tint for the soft shadows under cards and tiles (a warm plum instead of grey). */
-    const val SHADOW = 0xFF7A5CA8.toInt()
+    const val INK = 0xFF1D2B53.toInt()    // deep navy text
+    const val SUB = 0xFF56658A.toInt()
+    const val LINE = 0xFFDCE8F5.toInt()
+    const val BLUE = 0xFF3D86F0.toInt()   // the app's accent: sky blue
+    const val ORANGE = 0xFFFF9A3D.toInt() // sunny orange
+    const val GREEN = 0xFF3FB866.toInt()
+    const val RED = 0xFFEF5A64.toInt()
+    const val PURPLE = 0xFF8A6CF5.toInt()
+    const val YELLOW = 0xFFFFCB3D.toInt()
+    const val SOFT_BLUE = 0xFFDDEEFF.toInt()
+    const val SOFT_ORANGE = 0xFFFFEBD6.toInt()
+    const val SOFT_GREEN = 0xFFDDF5E3.toInt()
+    /** Tint for the soft shadows under cards and tiles (a deep blue instead of grey). */
+    const val SHADOW = 0xFF2C5BBF.toInt()
     val TILE = intArrayOf(
-        0xFF5E9DFA.toInt(), 0xFFFFA05C.toInt(), 0xFF57CB8C.toInt(), 0xFFF881B6.toInt(),
-        0xFFA88CFB.toInt(), 0xFFF7C035.toInt(), 0xFF40C8C2.toInt(), 0xFFFF7D7F.toInt(),
+        0xFF3D86F0.toInt(), 0xFFFF9A3D.toInt(), 0xFF3FB866.toInt(), 0xFFFF7BA8.toInt(),
+        0xFF8A6CF5.toInt(), 0xFFFFC23D.toInt(), 0xFF22BFC0.toInt(), 0xFFFF6B6B.toInt(),
     )
 }
 
@@ -152,7 +154,7 @@ fun Context.label(text: CharSequence, sp: Float = 16f, color: Int = Pal.INK, bol
         this.text = text
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
         setTextColor(color)
-        if (bold) typeface = Typeface.DEFAULT_BOLD
+        if (bold) typeface = if (sp >= 19f) CHUNKY else Typeface.DEFAULT_BOLD
         if (sp >= 20f) letterSpacing = -0.01f
         setLineSpacing(0f, 1.08f)
         if (lines > 0) { maxLines = lines; ellipsize = TextUtils.TruncateAt.END }
@@ -167,7 +169,7 @@ fun Context.pill(text: CharSequence, bg: Int, fg: Int = Color.WHITE, sp: Float =
         val base: Drawable = when {
             !opaque -> rounded(bg, r, dp(1), 0x38FFFFFF)          // glassy, for colorful or dark backgrounds
             light -> rounded(bg, r, dp(1), Pal.LINE)
-            else -> sheen(bg, r)
+            else -> toyBackground(bg, r, depth = dp(4))
         }
         background = pressable(base, r, if (light) 0x1F3A2A6B else 0x40FFFFFF)
         if (opaque) lift(dpf(if (light) 2f else 4f), if (light) Pal.SHADOW else bg)
@@ -197,13 +199,17 @@ fun Context.hbox(): LinearLayout = LinearLayout(this).apply {
 }
 
 fun Context.card(pad: Int = 16, color: Int = Pal.CARD): LinearLayout = vbox().apply {
-    background = rounded(color, dpf(28f), dp(1), Pal.EDGE)
-    if (Color.alpha(color) == 255) lift(dpf(5f))
-    setPadding(dp(pad), dp(pad), dp(pad), dp(pad))
+    background = if (Color.alpha(color) == 255) toyBackground(color, dpf(28f), blend(Pal.LINE, Pal.BLUE, 0.18f), dp(5))
+        else rounded(color, dpf(28f), dp(1), Pal.EDGE)
+    if (Color.alpha(color) == 255) lift(dpf(4f))
+    setPadding(dp(pad), dp(pad), dp(pad), dp(pad + 5))
 }
 
 fun Context.section(title: String): TextView =
-    label(title, 21f, Pal.INK, true).apply { setPadding(dp(6), dp(28), dp(6), dp(10)) }
+    label(title, 23f, Pal.INK, true).apply {
+        setPadding(dp(6), dp(28), dp(6), dp(10))
+        setShadowLayer(dpf(6f), 0f, dpf(1f), 0xCCFFFFFF.toInt()) // stays readable over the sky
+    }
 
 fun Context.spacer(h: Int) = View(this).apply { layoutParams = LinearLayout.LayoutParams(1, dp(h)) }
 
@@ -319,6 +325,9 @@ fun blend(a: Int, b: Int, t: Float): Int {
     return Color.rgb(r, g, bl)
 }
 
+/** Set while a screen first opens, so its tiles bounce in (not on every refresh). */
+var animateGrids = false
+
 fun Context.columns(): Int {
     val w = resources.configuration.screenWidthDp
     return when { w >= 900 -> 5; w >= 700 -> 4; w >= 520 -> 3; else -> 2 }
@@ -326,13 +335,15 @@ fun Context.columns(): Int {
 
 fun Context.grid(views: List<View>, cols: Int = columns()): LinearLayout {
     val g = vbox().apply { clipChildren = false; clipToPadding = false }
+    var n = 0
     views.chunked(cols).forEach { rowViews ->
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false; clipToPadding = false }
         rowViews.forEach {
             // tiles float a little above the page and dip when pressed
             if (it.background != null && it.elevation == 0f) it.lift(dpf(4f))
-            if (it.hasOnClickListeners() && it.stateListAnimator == null) it.pressScale(0.97f)
+            if (it.hasOnClickListeners() && it.stateListAnimator == null) it.pressScale(0.94f)
             row.addView(it, lp(0, WRAP, 1f, dp(6), dp(6), dp(6), dp(8)))
+            if (animateGrids) it.popIn(60L * n++) // tiles bounce in one after another
         }
         repeat(cols - rowViews.size) { row.addView(View(this), lp(0, 1, 1f, dp(6), 0, dp(6), 0)) }
         g.addView(row, lp())

@@ -18,10 +18,13 @@ abstract class ParentActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // soft pastel wash with a few color blooms behind the cards
-        val root = vbox().apply { background = WashDrawable(); clipChildren = false }
-        window.statusBarColor = 0xFFFFEAF3.toInt()
-        window.navigationBarColor = 0xFFE3F3FF.toInt()
+        // a sunny backyard (sky, sun, drifting clouds, hills) behind the cards
+        val frame = FrameLayout(this)
+        frame.addView(BackyardView(this), FrameLayout.LayoutParams(MATCH, MATCH))
+        val root = vbox().apply { clipChildren = false }
+        frame.addView(root, FrameLayout.LayoutParams(MATCH, MATCH))
+        window.statusBarColor = 0xFF7CC8FF.toInt()
+        window.navigationBarColor = 0xFF7CCB5B.toInt()
         val bar = hbox().apply { setPadding(dp(14), dp(14), dp(14), dp(10)); clipChildren = false; clipToPadding = false }
         if (hasBack) {
             bar.addView(label("←", 22f, Pal.INK, true).apply {
@@ -46,7 +49,7 @@ abstract class ParentActivity : Activity() {
         body = vbox().apply { setPadding(dp(18), dp(4), dp(18), dp(48)); clipChildren = false; clipToPadding = false }
         scroll.addView(body, FrameLayout.LayoutParams(MATCH, WRAP))
         root.addView(scroll, lp(MATCH, 0, 1f))
-        setContentView(root)
+        setContentView(frame)
     }
 
     fun addAction(text: String, onClick: () -> Unit) {
@@ -57,7 +60,9 @@ abstract class ParentActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        animateGrids = !entered
         rebuild()
+        animateGrids = false
         if (!entered) {
             // the first time the screen opens, let the content drift up into place
             entered = true
