@@ -431,6 +431,8 @@
   .ls-text button { margin-top: 10px; min-height: 42px; padding: 8px 16px; font-size: 14px; color: #3b3326; background: rgba(0,0,0,.07); display: inline-flex; gap: 8px; align-items: center; justify-content: center; }
   @keyframes lighton { from { opacity: 0; } }
 
+  .ov-btn { margin-top: 14px; min-height: 44px; padding: 10px 18px; border-radius: 22px; font-weight: 700; color: var(--on-glow); background: var(--glow); pointer-events: auto; }
+
   @media (max-width: 360px) {
     body { padding-left: 12px; padding-right: 12px; }
     .card { padding: 16px; }
@@ -609,7 +611,7 @@
     <div id="stage">
       <img id="cam" alt="Live camera">
       <div class="live-tag hidden" id="liveTag"><span class="dot live"></span><span>LIVE</span></div>
-      <div id="overlay"><div class="loader"></div><div id="overlayText">Connecting…</div></div>
+      <div id="overlay"><div class="loader"></div><div id="overlayText">Connecting…</div><button id="overlayBtn" class="ov-btn hidden"></button></div>
       <div class="stage-tools">
         <button id="flip" aria-label="Switch camera"><svg class="i"><use href="#i-flip"/></svg><span class="sr" id="flipText">Back cam</span></button>
         <button id="rotate" aria-label="Rotate"><svg class="i"><use href="#i-rotate"/></svg></button>
@@ -1323,6 +1325,17 @@
     $("overlay").classList.toggle("hidden", !text);
     $("overlayText").textContent = text || "";
     $("overlay").querySelector(".loader").style.display = spin ? "" : "none";
+    $("overlayBtn").classList.add("hidden");
+  }
+  /** Overlay with one button (e.g. "reconnect at home"). */
+  function overlayAction(text, label, act) {
+    overlay(text, false);
+    var b = $("overlayBtn"); b.textContent = label; b.onclick = act; b.classList.remove("hidden");
+  }
+  /** Opens her phone's own page on the home Wi-Fi; it re-pairs this iPhone for away-from-home use by itself. */
+  function goHomeWifi() {
+    var a = store.get("lastSeen") || "avriella.local:8080", c = code || store.get("lcode") || "";
+    location.href = "http://" + a + "/" + (c ? "#code=" + encodeURIComponent(c) : "");
   }
 
   var streamGen = 0;
@@ -1403,7 +1416,14 @@
       if (e.message === "auth") return;
       setMode("Can't reach her phone", "i-wifi", false);
       fails++;
-      if (RELAY) { setMode(Relay.alive() ? "Her phone isn't answering" : "Connecting to the relay…", "i-globe", false); return; }
+      if (RELAY) {
+        setMode(Relay.alive() ? "Her phone isn't answering" : "Connecting to the relay…", "i-globe", false);
+        // the relay works but her phone stays silent: most likely her pairing key changed (e.g. after a dead battery)
+        if (Relay.alive() && fails >= 2) overlayAction(
+          "Her phone isn't answering over the internet. If you're home, reconnect on the Wi-Fi: this iPhone re-pairs by itself and works from anywhere again.",
+          "I'm home, reconnect", goHomeWifi);
+        return;
+      }
       if (fails >= 2 && autoFind && !scanning && !document.hidden) findPhone();
     });
   }
