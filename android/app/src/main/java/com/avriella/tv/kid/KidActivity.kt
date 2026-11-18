@@ -26,6 +26,7 @@ import com.avriella.tv.cam.Remote
 import com.avriella.tv.data.Library
 import com.avriella.tv.ui.MATCH
 import com.avriella.tv.ui.Pal
+import com.avriella.tv.ui.*
 import com.avriella.tv.ui.WRAP
 import com.avriella.tv.ui.chips
 import com.avriella.tv.ui.dp
@@ -110,7 +111,7 @@ abstract class KidActivity : Activity() {
         root.addView(sleepy, FrameLayout.LayoutParams(MATCH, MATCH))
 
         hint = label("🔒  Hold both volume buttons to unlock", 13f, Color.WHITE, true).apply {
-            background = rounded(0x99000000.toInt(), dpf(16f))
+            background = rounded(0xE62C5BBF.toInt(), dpf(18f), dp(2), 0x66FFFFFF)
             setPadding(dp(14), dp(8), dp(14), dp(8))
             alpha = 0f
         }
@@ -262,14 +263,15 @@ abstract class KidActivity : Activity() {
     // ---------------- parent panel ----------------
     private fun buildPanelShell() {
         panel = FrameLayout(this).apply {
-            setBackgroundColor(0xD9101225.toInt())
+            setBackgroundColor(0xB31D3F8A.toInt()) // soft blue veil over the video
             visibility = View.GONE
             isClickable = true
         }
         val scroll = ScrollView(this).apply { isFillViewport = false }
         panelBody = vbox().apply {
-            background = rounded(0xFF22243F.toInt(), dpf(26f))
-            setPadding(dp(20), dp(18), dp(20), dp(20))
+            background = toyBackground(Pal.CARD, dpf(30f), 0xFFBFD8F2.toInt(), dp(6))
+            elevation = dpf(10f)
+            setPadding(dp(20), dp(16), dp(20), dp(26))
         }
         val w = minOf(resources.displayMetrics.widthPixels - dp(32), dp(640))
         scroll.addView(panelBody, FrameLayout.LayoutParams(w, WRAP, Gravity.CENTER_HORIZONTAL).apply { setMargins(0, dp(16), 0, dp(16)) })
@@ -284,6 +286,7 @@ abstract class KidActivity : Activity() {
         panel.alpha = 0f
         panel.visibility = View.VISIBLE
         panel.animate().alpha(1f).setDuration(180).start()
+        panelBody.popIn()
         ui.removeCallbacks(panelTick)
         ui.postDelayed(panelTick, 1000)
     }
@@ -299,8 +302,11 @@ abstract class KidActivity : Activity() {
         val b = panelBody
         b.removeAllViews()
         val head = hbox()
-        head.addView(label("👋  Parent controls", 20f, Color.WHITE, true), lp(0, WRAP, 1f))
-        countdown = label("Locks again in ${panelLeft}s", 13f, 0xFFB9B8D6.toInt())
+        head.addView(PupView(this), lp(dp(52), dp(52), r = dp(8)))
+        head.addView(label("Grown-up controls", 21f, Pal.INK, true).apply { typeface = CHUNKY }, lp(0, WRAP, 1f))
+        countdown = label("Locks again in ${panelLeft}s", 12f, Pal.ORANGE, true).apply {
+            background = rounded(Pal.SOFT_ORANGE, dpf(14f)); setPadding(dp(10), dp(5), dp(10), dp(5))
+        }
         head.addView(countdown, lp(WRAP, WRAP))
         b.addView(head, lp())
 
@@ -318,45 +324,47 @@ abstract class KidActivity : Activity() {
         val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val cur = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
         vol.addView(roundBtn("−") { audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_LOWER, 0); rebuildPanel() })
-        vol.addView(label("🔊  $cur / $max", 17f, Color.WHITE, true).apply { gravity = Gravity.CENTER }, lp(0, WRAP, 1f))
+        vol.addView(label("🔊  $cur / $max", 18f, Pal.INK, true).apply { gravity = Gravity.CENTER }, lp(0, WRAP, 1f))
         vol.addView(roundBtn("+") { audio.adjustStreamVolume(AudioManager.STREAM_MUSIC, AudioManager.ADJUST_RAISE, 0); rebuildPanel() })
         b.addView(vol, lp())
 
         b.addView(sectionLabel("Screen brightness"))
-        b.addView(chips(listOf("Auto", "Bright", "Dim", "Night"), Library.settings.brightness, dark = true) {
+        b.addView(chips(listOf("Auto", "Bright", "Dim", "Night"), Library.settings.brightness, dark = false) {
             Library.settings.brightness = it; Library.save(); brightnessOverride = null; if (!sleeping) applyBrightness()
         })
 
         val sleepOpts = listOf(0, 15, 30, 45, 60, 90)
         val remaining = if (sleepAt > 0) " — stops in ${((sleepAt - System.currentTimeMillis()) / 60000 + 1)} min" else ""
         b.addView(sectionLabel("Sleep timer$remaining"))
-        b.addView(chips(sleepOpts.map { if (it == 0) "Off" else "$it min" }, sleepOpts.indexOf(sleepMin).coerceAtLeast(0), dark = true) {
+        b.addView(chips(sleepOpts.map { if (it == 0) "Off" else "$it min" }, sleepOpts.indexOf(sleepMin).coerceAtLeast(0), dark = false) {
             setSleep(sleepOpts[it]); rebuildPanel()
         })
 
         b.addView(sectionLabel("Touch screen"))
-        b.addView(chips(listOf("🔒 Locked", "👆 She can touch"), if (touchLocked) 0 else 1, dark = true) {
+        b.addView(chips(listOf("🔒 Locked", "👆 She can touch"), if (touchLocked) 0 else 1, dark = false) {
             touchLocked = it == 0
         })
 
         if (!KidLock.isFullLock(this)) {
-            b.addView(label("⚠️ Basic lock only. Set up Full Lock in the app's Kid Lock screen so Home & notifications are blocked too.", 13f, 0xFFFFC98B.toInt()).apply {
+            b.addView(label("⚠️ Basic lock only. Set up Full Lock in the app's Kid Lock screen so Home & notifications are blocked too.", 13f, 0xFFC0661A.toInt()).apply {
                 setPadding(0, dp(14), 0, 0)
             })
         }
 
         val actions = hbox()
         actions.addView(pill("🔒  Lock & give back", Pal.GREEN) { closePanel() }, lp(0, WRAP, 1f, r = dp(6)))
-        actions.addView(pill("🏠  Exit to menu", 0x33FFFFFF) { exitKidMode() }, lp(0, WRAP, 1f, l = dp(6)))
+        actions.addView(pill("🏠  Exit to menu", Pal.ORANGE) { exitKidMode() }, lp(0, WRAP, 1f, l = dp(6)))
         b.addView(actions, lp(MATCH, WRAP, t = dp(18)))
     }
 
-    protected fun sectionLabel(t: String) = label(t, 13f, 0xFFB9B8D6.toInt(), true).apply { setPadding(0, dp(14), 0, dp(6)) }
+    protected fun sectionLabel(t: String) = label(t, 13f, Pal.SUB, true).apply { setPadding(dp(2), dp(16), 0, dp(6)) }
 
     protected fun roundBtn(t: String, sp: Float = 22f, onClick: () -> Unit): TextView =
         label(t, sp, Color.WHITE, true).apply {
             gravity = Gravity.CENTER
-            background = rounded(0x33FFFFFF, dpf(28f))
+            background = pressable(toyBackground(Pal.BLUE, dpf(28f), depth = dp(4)), dpf(28f), 0x40FFFFFF)
+            setPadding(0, 0, 0, dp(4))
+            pressScale(0.88f)
             layoutParams = LinearLayout.LayoutParams(dp(56), dp(56)).apply { setMargins(dp(4), 0, dp(4), 0) }
             setOnClickListener { onClick() }
         }

@@ -18,6 +18,7 @@ import com.avriella.tv.data.Library
 import com.avriella.tv.data.Video
 import com.avriella.tv.ui.MATCH
 import com.avriella.tv.ui.Pal
+import com.avriella.tv.ui.*
 import com.avriella.tv.ui.WRAP
 import com.avriella.tv.ui.dp
 import com.avriella.tv.ui.dpf
@@ -233,13 +234,16 @@ class PlayerActivity : KidActivity() {
     // ---------------- parent panel bits ----------------
     override fun buildPanelExtras(box: LinearLayout) {
         val v = queue.getOrNull(index) ?: return
-        box.addView(label("Now playing", 13f, 0xFFB9B8D6.toInt(), true))
-        box.addView(label(v.title, 18f, Color.WHITE, true, 2))
+        box.addView(label("NOW PLAYING", 12f, Pal.ORANGE, true).apply { letterSpacing = 0.08f })
+        box.addView(label(v.title, 19f, Pal.INK, true, 2).apply { typeface = CHUNKY })
 
         val dur = video.duration.coerceAtLeast(0)
         val sb = SeekBar(this).apply {
             max = if (dur > 0) dur else 1
             progress = video.currentPosition
+            progressTintList = android.content.res.ColorStateList.valueOf(Pal.ORANGE)
+            thumbTintList = android.content.res.ColorStateList.valueOf(Pal.BLUE)
+            progressBackgroundTintList = android.content.res.ColorStateList.valueOf(Pal.LINE)
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(s: SeekBar, p: Int, fromUser: Boolean) { if (fromUser) timeLabel?.text = timeText(p) }
                 override fun onStartTrackingTouch(s: SeekBar) { seeking = true }
@@ -248,7 +252,7 @@ class PlayerActivity : KidActivity() {
         }
         seekBar = sb
         box.addView(sb, lp(MATCH, WRAP, t = dp(8)))
-        timeLabel = label(timeText(video.currentPosition), 13f, 0xFFB9B8D6.toInt()).apply { gravity = Gravity.END }
+        timeLabel = label(timeText(video.currentPosition), 13f, Pal.SUB).apply { gravity = Gravity.END }
         box.addView(timeLabel, lp())
 
         val ctr = hbox().apply { gravity = Gravity.CENTER }
@@ -263,7 +267,7 @@ class PlayerActivity : KidActivity() {
         ctr.addView(roundBtn("⏭", 20f) { next(); ui.postDelayed({ rebuildPanel() }, 400) })
         box.addView(ctr, lp(MATCH, WRAP, t = dp(6)))
         val lv = Library.settings.levelVideo
-        box.addView(pill(if (lv) "🧭  Keep level: ON" else "🧭  Keep level: off", if (lv) Pal.GREEN else 0x33FFFFFF, Color.WHITE) {
+        box.addView(pill(if (lv) "🧭  Keep level: ON" else "🧭  Keep level: off", if (lv) Pal.GREEN else Pal.SOFT_BLUE, if (lv) Color.WHITE else Pal.INK) {
             Library.settings.levelVideo = !Library.settings.levelVideo; Library.save(); applyLevel(); rebuildPanel()
         }, lp(MATCH, WRAP, t = dp(10)))
 
@@ -272,8 +276,8 @@ class PlayerActivity : KidActivity() {
             val row = hbox()
             queue.forEachIndexed { i, q ->
                 val cur = i == index
-                row.addView(label("${i + 1}. ${q.title}", 14f, Color.WHITE, cur, 2).apply {
-                    background = rounded(if (cur) Pal.ORANGE else 0x22FFFFFF, dpf(14f))
+                row.addView(label("${i + 1}. ${q.title}", 14f, if (cur) Color.WHITE else Pal.INK, cur, 2).apply {
+                    background = rounded(if (cur) Pal.ORANGE else Pal.SOFT_BLUE, dpf(14f))
                     setPadding(dp(12), dp(10), dp(12), dp(10))
                     maxWidth = dp(220)
                     setOnClickListener { play(i, fromStart = false); ui.postDelayed({ rebuildPanel() }, 400) }

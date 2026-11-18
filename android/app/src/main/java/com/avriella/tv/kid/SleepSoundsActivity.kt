@@ -13,6 +13,7 @@ import com.avriella.tv.sleep.SoundscapeEngine
 import com.avriella.tv.sleep.sleepSound
 import com.avriella.tv.ui.MATCH
 import com.avriella.tv.ui.Pal
+import com.avriella.tv.ui.*
 import com.avriella.tv.ui.WRAP
 import com.avriella.tv.ui.chips
 import com.avriella.tv.ui.dp
@@ -95,9 +96,9 @@ class SleepSoundsActivity : KidActivity() {
     }
 
     override fun buildPanelExtras(box: LinearLayout) {
-        box.addView(label("Sleep sound", 13f, 0xFFB9B8D6.toInt(), true))
+        box.addView(label("Sleep sound", 13f, Pal.SUB, true))
         val idx = SLEEP_SOUNDS.indexOfFirst { it.id == soundId }.coerceAtLeast(0)
-        box.addView(chips(SLEEP_SOUNDS.map { "${it.emoji} ${it.name}" }, idx, dark = true) { pick(SLEEP_SOUNDS[it].id) }, lp(MATCH, WRAP, t = dp(6)))
+        box.addView(chips(SLEEP_SOUNDS.map { "${it.emoji} ${it.name}" }, idx, dark = false) { pick(SLEEP_SOUNDS[it].id) }, lp(MATCH, WRAP, t = dp(6)))
         box.addView(pill(if (engine.isPlaying) "⏸  Pause sound" else "▶  Play sound", Pal.BLUE) {
             if (engine.isPlaying) { engine.pause(); CamState.playing = false } else { engine.resume(); CamState.playing = true }
             rebuildPanel()

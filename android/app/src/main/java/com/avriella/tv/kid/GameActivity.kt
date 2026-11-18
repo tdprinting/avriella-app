@@ -15,6 +15,7 @@ import com.avriella.tv.games.Sounds
 import com.avriella.tv.games.makeGame
 import com.avriella.tv.ui.MATCH
 import com.avriella.tv.ui.Pal
+import com.avriella.tv.ui.*
 import com.avriella.tv.ui.WRAP
 import com.avriella.tv.ui.chips
 import com.avriella.tv.ui.dp
@@ -63,9 +64,9 @@ class GameActivity : KidActivity() {
     }
 
     override fun buildPanelExtras(box: LinearLayout) {
-        box.addView(label("Switch game", 13f, 0xFFB9B8D6.toInt(), true))
+        box.addView(label("Switch game", 13f, Pal.SUB, true))
         val idx = GAMES.indexOfFirst { it.id == gameId }.coerceAtLeast(0)
-        box.addView(chips(GAMES.map { "${it.emoji} ${it.name}" }, idx, dark = true) {
+        box.addView(chips(GAMES.map { "${it.emoji} ${it.name}" }, idx, dark = false) {
             show(GAMES[it].id); rebuildPanel()
         }, lp(MATCH, WRAP, t = dp(6)))
         if (game?.canClear == true) {

@@ -111,6 +111,7 @@ class MainActivity : ParentActivity() {
     override fun onResume() {
         // If something ever crashed while locked, don't leave the parents stuck.
         KidLock.exit(this)
+        CamState.mode = "menu"
         super.onResume()
         com.avriella.tv.cam.Remote.handler = remoteHandler
         if (Library.settings.camEnabled && !askedCamera &&
