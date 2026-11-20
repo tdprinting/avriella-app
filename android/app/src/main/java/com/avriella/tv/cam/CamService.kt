@@ -49,7 +49,7 @@ class CamService : Service() {
         cam = c
         server = CamServer(applicationContext, c).also { android.util.Log.i("AvriellaCam", "server on port " + it.start()) }
         mdns = MdnsResponder(applicationContext).also { it.start() }
-        relay = RelayClient().also { it.start() }
+        relay = RelayClient(applicationContext).also { it.start() }
         CamState.running = true
     }
 

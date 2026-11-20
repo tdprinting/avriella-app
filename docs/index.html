@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" href="icon.png">
 <title>Baby Cam</title>
 <style>
-  /* ============ Baby Cam · "Nightlight" design ============ */
+  /* ============ Baby Cam Â· "Nightlight" design ============ */
   :root {
     color-scheme: dark;
     --bg: #0a0c19; --bg-2: #111430;
@@ -556,7 +556,7 @@
   <div class="card pad-lg hidden" id="connecting" style="text-align:center">
     <div class="hero-ic"><svg class="i"><use href="#i-mark"/></svg></div>
     <div class="loader" style="margin:0 auto 14px"></div>
-    <h2 class="big" id="connTitle">Opening baby cam…</h2>
+    <h2 class="big" id="connTitle">Opening baby camâ€¦</h2>
     <p class="muted" id="connAddr" style="margin:0"></p>
     <div class="row" style="margin-top:20px">
       <button class="btn-main" id="openNow"><svg class="i sm"><use href="#i-play"/></svg>Open now</button>
@@ -575,17 +575,17 @@
     <h2 class="big" style="text-align:center">Connect to her phone</h2>
     <ol class="steps">
       <li><span>Usually this happens by itself on your Wi-Fi or hotspot.</span></li>
-      <li><span>If not, open <b>Avriella TV → Manage → Baby cam</b> on her phone and type the address it shows.</span></li>
-      <li><span>A code is only needed if you turned on “Require a code”.</span></li>
+      <li><span>If not, open <b>Avriella TV â†’ Manage â†’ Baby cam</b> on her phone and type the address it shows.</span></li>
+      <li><span>A code is only needed if you turned on â€œRequire a codeâ€.</span></li>
     </ol>
     <label class="field" for="addr">Phone address</label>
     <input id="addr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="192.168.1.23:8080">
     <label class="field" for="lcode">6-digit code</label>
-    <input id="lcode" class="code" inputmode="numeric" maxlength="7" placeholder="••••••">
+    <input id="lcode" class="code" inputmode="numeric" maxlength="7" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢">
     <details class="more">
       <summary><svg class="i sm"><use href="#i-car"/></svg>Car mode (no Wi-Fi)</summary>
       <p class="muted">Turn on <b>Personal Hotspot</b> on this iPhone, join it from her phone once, and open Avriella TV. Her phone then shows a <b>172.20.10.x</b> address. Type it here.</p>
-      <p class="muted">Tip: give her phone a fixed IP of <b>172.20.10.9</b> on your hotspot (Wi-Fi → your hotspot → Edit → IP settings: Static, gateway 172.20.10.1) so it never changes.</p>
+      <p class="muted">Tip: give her phone a fixed IP of <b>172.20.10.9</b> on your hotspot (Wi-Fi â†’ your hotspot â†’ Edit â†’ IP settings: Static, gateway 172.20.10.1) so it never changes.</p>
       <label class="field" for="carAddr">Her phone's address on your hotspot</label>
       <input id="carAddr" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="172.20.10.9:8080">
     </details>
@@ -599,8 +599,8 @@
 <section id="login" class="card pad-lg hidden" style="text-align:center">
   <div class="hero-ic"><svg class="i"><use href="#i-lock"/></svg></div>
   <h2 class="big">Enter the code</h2>
-  <p class="muted">It's on her phone in <b>Manage → Baby cam</b>.</p>
-  <input id="code" class="code" inputmode="numeric" maxlength="7" placeholder="••••••" autocomplete="one-time-code">
+  <p class="muted">It's on her phone in <b>Manage â†’ Baby cam</b>.</p>
+  <input id="code" class="code" inputmode="numeric" maxlength="7" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="one-time-code">
   <div class="err" id="loginErr"></div>
   <button class="wide btn-main" id="loginBtn">Watch</button>
 </section>
@@ -611,7 +611,7 @@
     <div id="stage">
       <img id="cam" alt="Live camera">
       <div class="live-tag hidden" id="liveTag"><span class="dot live"></span><span>LIVE</span></div>
-      <div id="overlay"><div class="loader"></div><div id="overlayText">Connecting…</div><button id="overlayBtn" class="ov-btn hidden"></button></div>
+      <div id="overlay"><div class="loader"></div><div id="overlayText">Connectingâ€¦</div><button id="overlayBtn" class="ov-btn hidden"></button></div>
       <div class="stage-tools">
         <button id="flip" aria-label="Switch camera"><svg class="i"><use href="#i-flip"/></svg><span class="sr" id="flipText">Back cam</span></button>
         <button id="rotate" aria-label="Rotate"><svg class="i"><use href="#i-rotate"/></svg></button>
@@ -625,8 +625,8 @@
   <div class="panel" data-tab="live">
     <div class="cam-row" id="camSwitch"></div>
     <div class="glance">
-      <span class="chip" id="mode">…</span>
-      <span class="chip" id="battery">–</span>
+      <span class="chip" id="mode">â€¦</span>
+      <span class="chip" id="battery">â€“</span>
       <button class="chip hidden" id="liveNow"><svg class="i"><use href="#i-play-tab"/></svg><span id="liveNowT"></span></button>
     </div>
     <div class="banner hidden" id="sleepBox">
@@ -640,7 +640,7 @@
         <button class="call-btn" id="callBtn"><svg class="i"><use href="#i-live"/></svg>Video call</button>
         <button class="call-btn cancel-btn" id="talkCancel" aria-label="Cancel voice message"><svg class="i"><use href="#i-close"/></svg>Cancel</button>
       </div>
-      <div class="voice-head"><span>Voice · <b id="fxName" style="color:var(--ink)">Normal</b></span><button id="hearBtn" disabled><svg class="i"><use href="#i-ear"/></svg>Hear last</button></div>
+      <div class="voice-head"><span>Voice Â· <b id="fxName" style="color:var(--ink)">Normal</b></span><button id="hearBtn" disabled><svg class="i"><use href="#i-ear"/></svg>Hear last</button></div>
       <div class="fx-row" id="fxGrid"></div>
       <p class="note" id="talkNote">Her show turns down while your voice plays. A call pauses it and picks up where she left off.</p>
     </div>
@@ -686,7 +686,7 @@
   <!-- HER PHONE -->
   <div class="panel hidden" data-tab="phone">
     <div class="card">
-      <div class="sec"><span class="badge"><svg class="i"><use href="#i-vol-up"/></svg></span><h2>Volume</h2><span class="val" id="volVal">–</span></div>
+      <div class="sec"><span class="badge"><svg class="i"><use href="#i-vol-up"/></svg></span><h2>Volume</h2><span class="val" id="volVal">â€“</span></div>
       <div class="vol">
         <button id="volDown" aria-label="Quieter"><svg class="i"><use href="#i-vol-down"/></svg></button>
         <input type="range" id="volSlider" min="0" max="15" step="1" value="0" aria-label="Volume">
@@ -710,24 +710,24 @@
         <button data-v="30">30 min</button>
         <button data-v="45">45 min</button>
         <button data-v="60">1 hour</button>
-        <button data-v="90">1½ hours</button>
+        <button data-v="90">1Â½ hours</button>
         <button data-v="end">After this video</button>
       </div>
       <div class="row" style="margin-top:12px">
         <button class="btn-soft" id="sleepNow"><svg class="i sm"><use href="#i-moon"/></svg>Sleep now</button>
         <button class="btn-main hidden" id="wakeBtn"><svg class="i sm"><use href="#i-sun"/></svg>Wake up</button>
       </div>
-      <p class="note">When time's up her phone pauses and shows a calm “Night night” screen.</p>
+      <p class="note">When time's up her phone pauses and shows a calm â€œNight nightâ€ screen.</p>
     </div>
 
     <div class="card">
       <div class="hidden" id="touchBox">
         <div class="list-row">
           <span class="ic"><svg class="i"><use href="#i-hand"/></svg></span>
-          <div class="txt"><b>Touch screen</b><small id="touchVal">–</small></div>
+          <div class="txt"><b>Touch screen</b><small id="touchVal">â€“</small></div>
           <button class="btn-soft" id="touchBtn">Unlock</button>
         </div>
-        <p class="warn hidden" id="pinWarn">Her phone may show an “App is pinned” popup when a show starts. To stop it for good: on her phone open the Avriella TV menu, tap “Basic lock”, then “Open Test DPC” and tick Avriella TV.</p>
+        <p class="warn hidden" id="pinWarn">Her phone may show an â€œApp is pinnedâ€ popup when a show starts. To stop it for good: on her phone open the Avriella TV menu, tap â€œBasic lockâ€, then â€œOpen Test DPCâ€ and tick Avriella TV.</p>
       </div>
       <label class="switch list-row"><span class="ic"><svg class="i"><use href="#i-torch"/></svg></span><span class="txt"><b>Her phone's flashlight</b><small>turns itself off after 10 minutes</small></span><input type="checkbox" id="herTorch"></label>
       <label class="switch list-row"><span class="ic"><svg class="i"><use href="#i-level"/></svg></span><span class="txt"><b>Keep video level</b><small>when she flips the phone</small></span><input type="checkbox" id="levelSw"></label>
@@ -739,11 +739,11 @@
 
   <!-- BABY BOOK -->
   <div class="panel hidden" data-tab="baby">
-    <div id="babyEmpty" class="empty">Loading her baby book…</div>
+    <div id="babyEmpty" class="empty">Loading her baby bookâ€¦</div>
     <div id="babyCard" class="hidden">
       <div class="baby-hero">
         <small class="k">Today</small>
-        <b id="babyAge">–</b>
+        <b id="babyAge">â€“</b>
         <small id="babyAgeSub"></small>
         <small id="babyNext" style="margin-top:6px"></small>
       </div>
@@ -809,7 +809,7 @@
       <summary><svg class="i sm"><use href="#i-sparkle"/></svg>First time? Turn on the camera's video link</summary>
       <ol class="steps">
         <li><span>Open the <b>Tapo</b> app and tap the camera.</span></li>
-        <li><span>Tap the <b>gear</b> (top right) → <b>Advanced Settings</b> → <b>Camera Account</b>.</span></li>
+        <li><span>Tap the <b>gear</b> (top right) â†’ <b>Advanced Settings</b> â†’ <b>Camera Account</b>.</span></li>
         <li><span>Make a username and password (letters and numbers are easiest). You can use the same one on every camera.</span></li>
         <li><span>Come back here, tap <b>Find cameras</b>, pick it and type that username and password.</span></li>
       </ol>
@@ -823,7 +823,7 @@
     <label class="field" for="camUser">Camera Account username</label>
     <input id="camUser" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" placeholder="from the Tapo app">
     <label class="field" for="camPass">Camera Account password</label>
-    <div class="pwrow"><input id="camPass" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••••"><button type="button" id="camEye" class="eye" aria-label="Show password"><svg class="i sm"><use href="#i-eye"/></svg></button></div>
+    <div class="pwrow"><input id="camPass" type="password" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"><button type="button" id="camEye" class="eye" aria-label="Show password"><svg class="i sm"><use href="#i-eye"/></svg></button></div>
     <div class="err" id="camErr"></div>
     <button class="wide btn-main" id="camSave"><svg class="i sm"><use href="#i-check"/></svg>Save camera</button>
     <div class="row" style="margin-top:10px">
@@ -837,7 +837,7 @@
 <div class="callview hidden" id="callView">
   <video id="callThem" autoplay playsinline></video>
   <video id="callMe" autoplay playsinline muted></video>
-  <div class="call-status" id="callStatus">Calling her phone…</div>
+  <div class="call-status" id="callStatus">Calling her phoneâ€¦</div>
   <div class="call-ctl">
     <button id="callMute" aria-label="Mute"><svg class="i"><use href="#i-mic"/></svg></button>
     <button id="callEnd" class="end" aria-label="Hang up"><svg class="i"><use href="#i-phone"/></svg></button>
@@ -884,7 +884,7 @@
   }
   window.addEventListener("scroll", function () { document.body.classList.toggle("scrolled", window.scrollY > 4); }, { passive: true });
 
-  // ---------- Tabs: Live · Shows · Her phone · Baby ----------
+  // ---------- Tabs: Live Â· Shows Â· Her phone Â· Baby ----------
   var TABS = ["live", "play", "phone", "baby"];
   var curTab = TABS.indexOf(store.get("ptab")) >= 0 ? store.get("ptab") : "live";
   function setTab(t, animate) {
@@ -1013,6 +1013,7 @@
     }
     function onMessage(u8) {
       decrypt(u8).then(function (j) {
+        if (j.p !== undefined || j.cid !== undefined) return; // a request bounced back at us, not her phone's answer
         var p = pending[j.id]; if (!p) return;
         p.parts[j.seq] = unb64(j.b || ""); p.n = j.n; p.s = j.s; p.t = j.t;
         for (var i = 0; i < p.n; i++) if (!p.parts[i]) return;
@@ -1022,12 +1023,26 @@
     }
     function Conn(url) {
       var self = this; self.alive = false;
-      var ws, buf = new Uint8Array(0), ping = null;
+      var ws, buf = new Uint8Array(0), ping = null, lastRx = 0, wait = 1000, retryT = null, openT = null;
+      function later() {
+        clearTimeout(retryT);
+        retryT = setTimeout(connect, wait + Math.random() * 600);
+        wait = Math.min(wait * 2, 15000);
+      }
       function connect() {
-        try { ws = new WebSocket(url, ["mqtt"]); } catch (e) { setTimeout(connect, 5000); return; }
+        clearTimeout(retryT); clearTimeout(openT);
+        if (ws && ws.readyState <= 1) { try { ws.onclose = null; ws.close(); } catch (e) {} }
+        clearInterval(ping); buf = new Uint8Array(0);
+        if (self.alive) { self.alive = false; stateChanged(); }
+        try { ws = new WebSocket(url, ["mqtt"]); } catch (e) { later(); return; }
+        var me = ws;
         ws.binaryType = "arraybuffer";
-        ws.onopen = function () { ws.send(pkt(0x10, cat(str("MQTT"), new Uint8Array([4, 2, 0, 60]), str(cid)))); };
+        // a relay that doesn't answer within 10 s (bad cell signal) is given up on and tried again
+        openT = setTimeout(function () { if (ws === me && !self.alive) try { me.close(); } catch (e) {} }, 10000);
+        ws.onopen = function () { ws.send(pkt(0x10, cat(str("MQTT"), new Uint8Array([4, 2, 0, 30]), str(cid)))); };
         ws.onmessage = function (e) {
+          if (ws !== me) return;
+          lastRx = Date.now();
           buf = cat(buf, new Uint8Array(e.data));
           while (buf.length >= 2) {
             var mult = 1, len = 0, i = 1, d;
@@ -1036,18 +1051,36 @@
             var type = buf[0], body = buf.subarray(i, i + len); buf = buf.slice(i + len);
             if ((type >> 4) === 2) ws.send(pkt(0x82, cat(new Uint8Array([0, 1]), str("avriella/" + topic + "/a/" + cid), new Uint8Array([0]))));
             else if ((type >> 4) === 9) {
-              self.alive = true; stateChanged();
-              clearInterval(ping); ping = setInterval(function () { try { ws.send(new Uint8Array([0xC0, 0])); } catch (e) {} }, 40000);
+              self.alive = true; wait = 1000; clearTimeout(openT); stateChanged();
+              clearInterval(ping); ping = setInterval(function () {
+                // nothing heard for 45 s (pings answer every 20 s): the line is dead, start a fresh one
+                if (Date.now() - lastRx > 45000) { try { me.close(); } catch (e) {} return; }
+                try { me.send(new Uint8Array([0xC0, 0])); } catch (e) {}
+              }, 20000);
             } else if ((type >> 4) === 3) {
               var tl = (body[0] << 8) | body[1], off = 2 + tl + (((type >> 1) & 3) ? 2 : 0);
               onMessage(body.slice(off));
             }
           }
         };
-        ws.onclose = function () { self.alive = false; clearInterval(ping); buf = new Uint8Array(0); stateChanged(); setTimeout(connect, 3000); };
-        ws.onerror = function () { try { ws.close(); } catch (e) {} };
+        ws.onclose = function () {
+          if (ws !== me) return;
+          var was = self.alive;
+          self.alive = false; clearInterval(ping); clearTimeout(openT); buf = new Uint8Array(0); stateChanged();
+          if (was) wait = 1000;
+          later();
+        };
+        ws.onerror = function () { try { me.close(); } catch (e) {} };
       }
       self.publish = function (t, u8) { if (self.alive) try { ws.send(pkt(0x30, cat(str(t), u8))); } catch (e) {} };
+      // Back from the lock screen / another app / a network change: check the line right away and
+      // reconnect if it's gone quiet, instead of waiting for a timeout.
+      self.check = function () {
+        if (!self.alive) { wait = 1000; connect(); return; }
+        var asked = Date.now();
+        try { ws.send(new Uint8Array([0xC0, 0])); } catch (e) {}
+        setTimeout(function () { if (self.alive && lastRx < asked) { try { ws.close(); } catch (e) {} } }, 4000);
+      };
       connect();
     }
     return {
@@ -1064,6 +1097,7 @@
         }).then(function (k) { key = k; conns = RELAY_BROKERS.map(function (u) { return new Conn(u); }); });
       },
       alive: anyAlive,
+      check: function () { conns.forEach(function (c) { c.check(); }); },
       ready: function (ms) {
         return new Promise(function (res, rej) {
           if (anyAlive()) return res();
@@ -1083,14 +1117,28 @@
             if (body) m.b = b64(body.subarray(s * chunk, (s + 1) * chunk));
             msgs.push(m);
           }
+          // camera pictures are asked for again and again anyway: give up on a lost one quickly
+          var quick = /^\/api\/(tapo\/)?snap/.test(url);
           return new Promise(function (resolve, reject) {
-            pending[id] = { parts: [], n: 1, resolve: resolve, timer: setTimeout(function () { delete pending[id]; reject(new Error("Her phone didn't answer.")); }, body ? 60000 : 25000) };
+            var resend = [];
+            function done() { resend.forEach(clearTimeout); }
+            pending[id] = { parts: [], n: 1, resolve: function (r) { done(); resolve(r); },
+              timer: setTimeout(function () { done(); delete pending[id]; reject(new Error("Her phone didn't answer.")); }, quick ? 9000 : body ? 60000 : 25000) };
             // send each piece through every relay; her phone ignores the duplicates
-            msgs.reduce(function (p, m) {
-              return p.then(function () { return encrypt(m); }).then(function (u8) {
-                conns.forEach(function (c) { c.publish("avriella/" + topic + "/q", u8); });
+            var sealed = msgs.reduce(function (p, m) {
+              return p.then(function (list) { return encrypt(m).then(function (u8) { list.push(u8); return list; }); });
+            }, Promise.resolve([]));
+            function send() {
+              return sealed.then(function (list) {
+                list.forEach(function (u8) { conns.forEach(function (c) { c.publish("avriella/" + topic + "/q", u8); }); });
               });
-            }, Promise.resolve()).catch(reject);
+            }
+            send().catch(function (e) { done(); delete pending[id]; reject(e); });
+            // No answer yet? Ask again (same request, so it's never done twice); if her phone already
+            // answered and the answer got lost, it just sends that answer again.
+            if (!quick && n === 1) [5000, 11000, 18000].forEach(function (ms) {
+              resend.push(setTimeout(function () { if (pending[id]) send().catch(function () {}); }, ms));
+            });
           });
         });
       }
@@ -1167,7 +1215,7 @@
       b.onclick = function () {
         store.set("place", b.getAttribute("data-v"));
         markPlace(); clearTimeout(autoTimer);
-        $("connAddr").textContent = (place() === "car" ? "Car · " : "Home · ") + placeAddr(place());
+        $("connAddr").textContent = (place() === "car" ? "Car Â· " : "Home Â· ") + placeAddr(place());
       };
     });
     function go() { clearTimeout(autoTimer); var t = target(); if (t) location.href = t; }
@@ -1221,9 +1269,9 @@
     function showConnecting() {
       $("setup").classList.add("hidden");
       $("connecting").classList.remove("hidden");
-      $("connAddr").textContent = (place() === "car" ? "Car · " : "Home · ") + placeAddr(place());
+      $("connAddr").textContent = (place() === "car" ? "Car Â· " : "Home Â· ") + placeAddr(place());
       markPlace();
-      $("connTitle").textContent = autoOn() ? "Opening baby cam…" : "Baby cam";
+      $("connTitle").textContent = autoOn() ? "Opening baby camâ€¦" : "Baby cam";
       $("connecting").querySelector(".loader").style.display = autoOn() ? "" : "none";
       $("autoConnect").checked = autoOn();
       clearTimeout(autoTimer);
@@ -1296,7 +1344,7 @@
   $("loginBtn").onclick = function () {
     var c = $("code").value.replace(/\D/g, "");
     if (c.length !== 6) { $("loginErr").textContent = "The code has 6 numbers."; return; }
-    $("loginErr").textContent = "Checking…";
+    $("loginErr").textContent = "Checkingâ€¦";
     fetch("/api/info?key=" + c, { cache: "no-store" }).then(function (r) {
       if (r.status === 401) throw new Error("bad");
       return r.json();
@@ -1342,7 +1390,7 @@
   function relayStream() {
     clearTimeout(retryTimer); streaming = true;
     var gen = ++streamGen, img = $("cam");
-    overlay("Connecting from anywhere…", true);
+    overlay("Connecting from anywhereâ€¦", true);
     var shownAt = 0;
     function next() {
       if (!streaming || gen !== streamGen) return;
@@ -1360,7 +1408,7 @@
         setTimeout(next, 50);
       }).catch(function () {
         if (gen !== streamGen) return;
-        overlay(Relay.alive() ? "Waiting for her phone…" : "Connecting to the relay…", true);
+        if ($("overlayBtn").classList.contains("hidden")) overlay(Relay.alive() ? "Waiting for her phoneâ€¦" : "Connecting to the relayâ€¦", true);
         setTimeout(next, 2500);
       });
     }
@@ -1375,10 +1423,10 @@
     img.onload = function () { lastFrameAt = Date.now(); overlay(""); $("dot").classList.add("live"); $("liveTag").classList.remove("hidden"); };
     img.onerror = function () {
       $("dot").classList.remove("live"); $("liveTag").classList.add("hidden");
-      overlay("Waiting for her phone…", true);
+      overlay("Waiting for her phoneâ€¦", true);
       if (streaming) retryTimer = setTimeout(startStream, 3000);
     };
-    overlay("Starting camera…", true);
+    overlay("Starting cameraâ€¦", true);
     img.src = streamPath();
   }
   function stopStream() {
@@ -1391,12 +1439,17 @@
   var modeText = { watching: "Watching a show", playing: "Playing a game", sleeping: "Sleep screen", sounds: "Sleep sounds", menu: "In the parent menu" };
   var modeIcon = { watching: "i-tv", playing: "i-game", sleeping: "i-moon", sounds: "i-wave", menu: "i-home" };
   function setMode(text, icon, on) { $("mode").innerHTML = ic(icon || "i-wifi") + "<span></span>"; $("mode").lastChild.textContent = text; $("mode").classList.toggle("on", !!on); }
+  var infoBusy = 0;
   function pollInfo() {
-    fetch(api("info"), { cache: "no-store" }).then(function (r) {
+    // over the relay a slow answer can take a while: don't pile up more than two asks at once
+    if (RELAY && infoBusy >= 2) return;
+    infoBusy++;
+    var settle = function (x) { infoBusy = Math.max(0, infoBusy - 1); return x; };
+    fetch(api("info"), { cache: "no-store" }).then(settle, function (e) { settle(); throw e; }).then(function (r) {
       if (r.status === 401) { stopStream(); store.del("code"); login(); throw new Error("auth"); }
       return r.json();
     }).then(function (j) {
-      $("title").textContent = (j.name || "Baby") + "’s cam";
+      $("title").textContent = (j.name || "Baby") + "â€™s cam";
       document.title = (j.name || "Baby") + " cam";
       setMode(modeText[j.mode] || j.mode, modeIcon[j.mode], j.mode === "watching" || j.mode === "playing");
       $("battery").innerHTML = ic(j.charging ? "i-bolt" : "i-battery") + "<span>" + (+j.battery || 0) + "%</span>";
@@ -1407,6 +1460,10 @@
       updateTouch(j);
       if (!babyLoaded) loadBaby();
       rememberAddrs(j);
+      if (j.batteryOk === false && !store.get("battWarned")) {
+        store.set("battWarned", "1");
+        toast("Tip: on her phone, set Avriella TV's battery use to Unrestricted so it stays reachable while it sleeps.", 9000);
+      }
       if (typeof j.rotation === "number" && j.rotation !== deviceRot) { deviceRot = j.rotation; layout(); }
       if (j.error && isPhone()) overlay(j.error, false);
       if (!isPhone()) loadTapo();
@@ -1417,10 +1474,13 @@
       setMode("Can't reach her phone", "i-wifi", false);
       fails++;
       if (RELAY) {
-        setMode(Relay.alive() ? "Her phone isn't answering" : "Connecting to the relay…", "i-globe", false);
-        // the relay works but her phone stays silent: most likely her pairing key changed (e.g. after a dead battery)
-        if (Relay.alive() && fails >= 2) overlayAction(
-          "Her phone isn't answering over the internet. If you're home, reconnect on the Wi-Fi: this iPhone re-pairs by itself and works from anywhere again.",
+        setMode(Relay.alive() ? "Her phone isn't answering" : "Connecting to the relayâ€¦", "i-globe", false);
+        if (fails === 2) Relay.check();
+        // Short silences are normal (her Wi-Fi blips, the phone restarts): keep trying quietly.
+        // Only after about two minutes of silence suggest re-pairing, in case her pairing key changed.
+        if (Relay.alive() && fails >= 2 && fails < 10 && !streaming) overlay("Her phone isn't answering right now. It may be restarting or off Wi-Fi for a moment. Still tryingâ€¦", true);
+        if (Relay.alive() && fails >= 10) overlayAction(
+          "Her phone still isn't answering. Check that it's on and on Wi-Fi. If its pairing changed (e.g. after a reset), reconnect once on your home Wi-Fi and this iPhone re-pairs by itself.",
           "I'm home, reconnect", goHomeWifi);
         return;
       }
@@ -1441,7 +1501,7 @@
   setInterval(function () { if (babyLoaded && !document.hidden && $("flipbook").classList.contains("hidden")) loadBaby(); }, 60000);
   var KIND_ICONS = { food: "i-bottle", diaper: "i-diaper", nap: "i-nap", med: "i-pill", growth: "i-ruler", milestone: "i-star", bath: "i-bath", note: "i-note" };
   function kindIcon(id) { return KIND_ICONS[id] || "i-note"; }
-  function kindOf(id) { var k = (baby.kinds || []).filter(function (x) { return x.id === id; })[0]; return k || { id: id, emoji: "📝", label: "Note" }; }
+  function kindOf(id) { var k = (baby.kinds || []).filter(function (x) { return x.id === id; })[0]; return k || { id: id, emoji: "ðŸ“", label: "Note" }; }
   function agoTxt(t) {
     var m = Math.floor((Date.now() - t) / 60000);
     if (m < 1) return "just now"; if (m < 60) return m + " min ago";
@@ -1450,21 +1510,21 @@
   }
   function monthName(m) { return m === 0 ? "Newborn" : (m % 12 === 0 ? (m / 12) + (m === 12 ? " year" : " years") : m + (m === 1 ? " month" : " months")); }
   function monthDate(m) { var d = new Date(baby.birth); d.setMonth(d.getMonth() + m); return d; }
-  var hints = { food: "What and how much? (e.g. 4 oz bottle)", diaper: "Wet, dirty, both…", nap: "How long? (e.g. 1 hr 20 min)", med: "Which medicine and how much?", growth: "Weight and height (e.g. 18 lb, 28 in)", milestone: "What did she do?", bath: "Anything to note? (optional)", note: "Write a note" };
+  var hints = { food: "What and how much? (e.g. 4 oz bottle)", diaper: "Wet, dirty, bothâ€¦", nap: "How long? (e.g. 1 hr 20 min)", med: "Which medicine and how much?", growth: "Weight and height (e.g. 18 lb, 28 in)", milestone: "What did she do?", bath: "Anything to note? (optional)", note: "Write a note" };
   function renderBaby() {
     var j = baby, a = j.age;
     $("babyCard").classList.remove("hidden"); $("babyEmpty").classList.add("hidden");
     $("babyAge").textContent = (j.name || "She") + " is " + a.text + " old";
-    $("babyAgeSub").textContent = a.totalDays.toLocaleString() + " days · " + a.totalWeeks + " weeks · " + a.totalMonths + " months";
+    $("babyAgeSub").textContent = a.totalDays.toLocaleString() + " days Â· " + a.totalWeeks + " weeks Â· " + a.totalMonths + " months";
     var next = monthDate(a.totalMonths + 1), inDays = Math.max(1, Math.ceil((next - Date.now()) / 86400000)), nm = a.totalMonths + 1;
     $("babyNext").textContent = (nm % 12 === 0 ? "Turns " + nm / 12 : nm + " months old") + " in " + inDays + " day" + (inDays === 1 ? "" : "s") +
-      " · born " + new Date(j.birth).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
+      " Â· born " + new Date(j.birth).toLocaleString([], { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" });
     if (!$("babyKinds").children.length) {
       j.kinds.forEach(function (k) {
         var b = document.createElement("button");
         b.innerHTML = ic(kindIcon(k.id)) + esc(k.label);
         b.onclick = function () {
-          var note = prompt(k.label + " — " + (hints[k.id] || "note"), "");
+          var note = prompt(k.label + " â€” " + (hints[k.id] || "note"), "");
           if (note === null) return;
           fetch(bapi("/log", "&kind=" + k.id + "&by=iPhone&note=" + encodeURIComponent(note)), { cache: "no-store" })
             .then(function (r) { return r.json(); }).then(function () { toast(k.label + " logged"); loadBaby(); })
@@ -1496,7 +1556,7 @@
       var dt = new Date(e.time), day = dt.toLocaleDateString([], { weekday: "long", month: "short", day: "numeric" }), k = kindOf(e.kind);
       if (day !== lastDay) { html += '<div class="baby-day">' + esc(day) + "</div>"; lastDay = day; }
       html += '<div class="baby-row" data-id="' + esc(e.id) + '"><span class="e">' + ic(kindIcon(e.kind)) + "</span><div><b>" + esc(k.label) + "</b>" +
-        (e.note ? '<div class="n">' + esc(e.note) + "</div>" : "") + '</div><span class="t">' + dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + (e.by === "iPhone" ? " · iPhone" : "") + "</span></div>";
+        (e.note ? '<div class="n">' + esc(e.note) + "</div>" : "") + '</div><span class="t">' + dt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) + (e.by === "iPhone" ? " Â· iPhone" : "") + "</span></div>";
     });
     list.innerHTML = html || '<p class="muted">Everything you log shows up here, newest first.</p>';
     $("babyMore").classList.toggle("hidden", babyShowAll || j.entries.length <= 15);
@@ -1528,7 +1588,7 @@
   function pickPhoto(m) { pickMonth = m; $("babyFile").value = ""; $("babyFile").click(); }
   $("babyFile").onchange = function () {
     var f = this.files && this.files[0]; if (!f) return;
-    toast("Saving photo…");
+    toast("Saving photoâ€¦");
     var img = new Image(), url = URL.createObjectURL(f);
     img.onload = function () {
       var s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
@@ -1566,7 +1626,7 @@
     if (animate) { inc.src = flipSrc(m); inc.style.transform = "scale(1.05)"; inc.style.opacity = 1; out.style.opacity = 0; requestAnimationFrame(function () { requestAnimationFrame(function () { inc.style.transform = "scale(1)"; }); }); flipFront = !flipFront; }
     else { out.src = flipSrc(m); out.style.opacity = 1; inc.style.opacity = 0; }
     $("flipTitle").textContent = m === 0 ? "Newborn" : monthName(m) + " old";
-    $("flipSub").textContent = monthDate(m).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) + "  ·  " + (i + 1) + " of " + flipMonths.length;
+    $("flipSub").textContent = monthDate(m).toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) + "  Â·  " + (i + 1) + " of " + flipMonths.length;
     Array.prototype.forEach.call($("flipDots").children, function (d, k) { d.classList.toggle("on", k === i); });
     if (flipMonths.length > 1) { var pre = new Image(); pre.src = flipSrc(flipMonths[(i + 1) % flipMonths.length]); }
   }
@@ -1580,7 +1640,7 @@
   }
   $("babyFlip").onclick = function () {
     if (!baby || !(baby.photos || []).length) { toast("Add a photo first."); return; }
-    if (baby.photos.length < 2) toast("Only one photo so far — add more each month!");
+    if (baby.photos.length < 2) toast("Only one photo so far â€” add more each month!");
     openFlip(Math.min.apply(null, baby.photos.map(function (p) { return p.month; })), true);
   };
   $("flipClose").onclick = closeFlip;
@@ -1703,8 +1763,8 @@
     b.classList.toggle("rec", state === "rec"); b.classList.toggle("busy", state === "busy");
     b.classList.toggle("leaving", state === "rec" && leaving);
     $("talkCard").classList.toggle("recording", state !== "idle");
-    $("talkLabel").textContent = state === "rec" ? (leaving ? "Let go to cancel" : tapMode ? "Recording… tap to send" : "Recording… let go to send") : state === "busy" ? "Sending…" : "Hold to talk";
-    $("talkSub").textContent = state === "rec" && !tapMode && !leaving ? (sub ? sub + " · slide off to cancel" : "slide off to cancel") : sub || (state === "idle" ? "or tap to start, tap to send" : "");
+    $("talkLabel").textContent = state === "rec" ? (leaving ? "Let go to cancel" : tapMode ? "Recordingâ€¦ tap to send" : "Recordingâ€¦ let go to send") : state === "busy" ? "Sendingâ€¦" : "Hold to talk";
+    $("talkSub").textContent = state === "rec" && !tapMode && !leaving ? (sub ? sub + " Â· slide off to cancel" : "slide off to cancel") : sub || (state === "idle" ? "or tap to start, tap to send" : "");
   }
   /** Throws away the voice message being recorded (or stops it before it reaches her phone). */
   function cancelTalk() {
@@ -1829,7 +1889,7 @@
     if (call) return;
     call = { id: "" };
     var c = call;
-    $("callView").classList.remove("hidden"); callStatus("Calling her phone…");
+    $("callView").classList.remove("hidden"); callStatus("Calling her phoneâ€¦");
     stopStream();
     navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } }, audio: { echoCancellation: true, noiseSuppression: true } })
       .then(function (st) {
@@ -1842,21 +1902,21 @@
           if (call !== c) return;
           if (pc.connectionState === "connected") callStatus("");
           if (pc.connectionState === "failed") endCall(true, "Couldn't connect the call. Some networks block direct video; try again on Wi-Fi.");
-          if (pc.connectionState === "disconnected") callStatus("Reconnecting…");
+          if (pc.connectionState === "disconnected") callStatus("Reconnectingâ€¦");
         };
         return pc.createOffer().then(function (o) { return pc.setLocalDescription(o); }).then(function () { return iceDone(pc, 4000); }).then(function () {
           return fetch("/api/call/start?key=" + encodeURIComponent(code || ""), { method: "POST", body: JSON.stringify(pc.localDescription), headers: { "Content-Type": "application/json" } });
         }).then(function (r) { return r.json(); }).then(function (j) {
           if (j.error) throw new Error(j.error);
           if (call !== c) { fetch("/api/call/end?key=" + encodeURIComponent(code || "") + "&id=" + j.id); return; }
-          c.id = j.id; callStatus("Ringing…");
+          c.id = j.id; callStatus("Ringingâ€¦");
           var answered = false, busy = false;
           c.poll = setInterval(function () {
             if (busy || call !== c) return; busy = true;
             fetch("/api/call/state?key=" + encodeURIComponent(code || "") + "&id=" + c.id, { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (s) {
               if (call !== c) return;
               if (s.state === "ended") { endCall(false, "Call ended"); return; }
-              if (s.answer && !answered) { answered = true; callStatus("Connecting…"); return pc.setRemoteDescription(JSON.parse(s.answer)); }
+              if (s.answer && !answered) { answered = true; callStatus("Connectingâ€¦"); return pc.setRemoteDescription(JSON.parse(s.answer)); }
             }).catch(function () {}).then(function () { busy = false; });
           }, answered ? 2000 : 800);
         });
@@ -1878,7 +1938,7 @@
   // ---------- Touch lock ----------
   var touchLocked = null, touchSentAt = 0;
   function paintTouch() {
-    $("touchVal").textContent = touchLocked ? "Locked – taps do nothing" : "She can tap the screen";
+    $("touchVal").textContent = touchLocked ? "Locked â€“ taps do nothing" : "She can tap the screen";
     $("touchBtn").innerHTML = ic(touchLocked ? "i-unlock" : "i-lock", "sm") + (touchLocked ? "Unlock" : "Lock");
     $("touchBox").querySelector(".ic").innerHTML = ic(touchLocked ? "i-lock" : "i-hand");
   }
@@ -1889,7 +1949,7 @@
     torchOn = on; torchSentAt = Date.now(); paintTorch();
     return fetch(api("torch") + "&on=" + (on ? 1 : 0), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       torchOn = !!j.torch; paintTorch();
-      toast(j.error ? j.error : torchOn ? "Her flashlight is on · off in 10 min" : "Her flashlight is off");
+      toast(j.error ? j.error : torchOn ? "Her flashlight is on Â· off in 10 min" : "Her flashlight is off");
     }).catch(function () { torchOn = !on; paintTorch(); toast("Couldn't reach her phone."); });
   }
   $("herTorch").onchange = function () { setHerTorch(this.checked); };
@@ -1946,14 +2006,14 @@
     var asleep = j.awake === false;
     $("sleepBox").classList.toggle("hidden", !asleep);
     if (asleep) $("sleepMsg").textContent = j.canWake === false
-      ? "Her screen is off. To wake it from here, open Manage → Baby cam on her phone and allow waking up."
+      ? "Her screen is off. To wake it from here, open Manage â†’ Baby cam on her phone and allow waking up."
       : "Her screen is off. Wake it, or just pick a show or sleep sound.";
     if (asleep && !wasAsleep) setMode("Screen off", "i-moon", false);
     wasAsleep = asleep;
   }
   var wasAsleep = false;
   $("screenWakeBtn").onclick = function () {
-    $("screenWakeBtn").disabled = true; $("screenWakeBtn").textContent = "Waking…";
+    $("screenWakeBtn").disabled = true; $("screenWakeBtn").textContent = "Wakingâ€¦";
     control("wake").then(function () { toast("Her phone is awake"); })
       .catch(function (e) { toast(e.message); })
       .then(function () { $("screenWakeBtn").disabled = false; $("screenWakeBtn").textContent = "Wake"; });
@@ -2007,7 +2067,7 @@
     function add(s) { if (list.indexOf(s) < 0) list.push(s); }
     var h = location.hostname;
     if (/^\d+\.\d+\.\d+\.\d+$/.test(h)) add(h.split(".").slice(0, 3).join("."));
-    add("172.20.10"); // iPhone Personal Hotspot (car mode) — only 13 addresses, so it's quick
+    add("172.20.10"); // iPhone Personal Hotspot (car mode) â€” only 13 addresses, so it's quick
     // the most common home router ranges
     ["192.168.1", "192.168.0", "10.0.0", "192.168.86", "192.168.68", "10.0.1", "192.168.2", "192.168.4", "192.168.50", "10.1.10"].forEach(add);
     return list;
@@ -2017,7 +2077,7 @@
     scanning = true;
     var port = location.port || "8080";
     var found = null;
-    overlay("Looking for her phone on Wi-Fi or your hotspot…", true);
+    overlay("Looking for her phone on Wi-Fi or your hotspotâ€¦", true);
     var byName = location.hostname !== "avriella.local" ? await probe("avriella.local", port) : null;
     if (byName) { found = byName.replace(/^avriella\.local/, "avriella.local"); }
     var ts = store.get("tsAddr");
@@ -2025,7 +2085,7 @@
     var subs = found ? [] : subnets();
     outer:
     for (var s = 0; s < subs.length; s++) {
-      $("findStatus").textContent = "Searching " + subs[s] + ".x …";
+      $("findStatus").textContent = "Searching " + subs[s] + ".x â€¦";
       var ips = [];
       var last = subs[s] === "172.20.10" ? 15 : 255;
       for (var i = 1; i < last; i++) { var ip = subs[s] + "." + i; if (ip !== location.hostname) ips.push(ip); }
@@ -2038,7 +2098,7 @@
     }
     scanning = false;
     if (found) {
-      $("findStatus").textContent = "Found her phone at " + found + " — reconnecting…";
+      $("findStatus").textContent = "Found her phone at " + found + " â€” reconnectingâ€¦";
       location.href = "http://" + found + "/" + (code ? "#code=" + encodeURIComponent(code) : "");
     } else {
       $("findStatus").textContent = "Couldn't find her phone. Is the Avriella TV app open on it and on this Wi-Fi?";
@@ -2125,7 +2185,7 @@
     editCam = c || null;
     $("camSheetTitle").textContent = c ? "Edit " + c.name : "Add a Tapo camera";
     $("camName").value = c ? c.name : ""; $("camIp").value = c ? c.ip : ""; $("camUser").value = c ? c.user : ""; $("camPass").value = "";
-    $("camPass").placeholder = c && c.hasLogin ? "unchanged" : "••••••••";
+    $("camPass").placeholder = c && c.hasLogin ? "unchanged" : "â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢";
     $("camErr").textContent = ""; $("camFound").textContent = "";
     $("camDelete").classList.toggle("hidden", !c);
     $("camHelp").open = !c && !tapoCams.length;
@@ -2135,11 +2195,11 @@
   $("camCancel").onclick = closeCamSheet;
   $("camSheet").addEventListener("click", function (e) { if (e.target === $("camSheet")) closeCamSheet(); });
   $("camScan").onclick = function () {
-    var btn = this; btn.disabled = true; btn.innerHTML = '<span class="loader" style="width:20px;height:20px"></span>Searching the Wi-Fi…';
+    var btn = this; btn.disabled = true; btn.innerHTML = '<span class="loader" style="width:20px;height:20px"></span>Searching the Wi-Fiâ€¦';
     $("camFound").textContent = "";
     fetch(api("tapo/scan"), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
       var list = (j && j.found) || [];
-      if (!list.length) { $("camFound").innerHTML = '<p class="note">No cameras found. Make sure they’re on the same Wi-Fi as her phone.</p>'; return; }
+      if (!list.length) { $("camFound").innerHTML = '<p class="note">No cameras found. Make sure theyâ€™re on the same Wi-Fi as her phone.</p>'; return; }
       list.forEach(function (f, i) {
         var b = document.createElement("button"); b.className = "found"; b.style.animationDelay = i * 60 + "ms";
         b.innerHTML = ic("i-dome") + "<span></span><small></small>";
@@ -2157,7 +2217,7 @@
         };
         $("camFound").appendChild(b);
       });
-    }).catch(function () { $("camFound").innerHTML = '<p class="note">Couldn’t search. Is her phone on?</p>'; })
+    }).catch(function () { $("camFound").innerHTML = '<p class="note">Couldnâ€™t search. Is her phone on?</p>'; })
       .then(function () { btn.disabled = false; btn.innerHTML = ic("i-search", "sm") + "Find cameras on the Wi-Fi"; });
   };
   $("camSave").onclick = function () {
@@ -2167,7 +2227,7 @@
     fetch("/api/tapo/save?key=" + encodeURIComponent(code || ""), { method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" } })
       .then(function (r) { return r.json(); }).then(function (j) {
         if (j.error) throw new Error(j.error);
-        $("camErr").textContent = "Checking the login with the camera…";
+        $("camErr").textContent = "Checking the login with the cameraâ€¦";
         return fetch(api("tapo/test") + "&id=" + encodeURIComponent(j.id), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (t) {
           return loadTapo().then(function () {
             if (t.error) { editCam = tapoCams.filter(function (c) { return c.id === j.id; })[0] || editCam; $("camPass").placeholder = "retype the password"; $("camPass").value = ""; throw new Error(t.error); }
@@ -2217,11 +2277,11 @@
     img.setAttribute("src", url);
   }
   var toastTimer = null;
-  function toast(t) {
+  function toast(t, ms) {
     t = String(t).replace(/^[\u2600-\u27BF\uD83C-\uDBFF\uDC00-\uDFFF\uFE0F\u200D\s]+/, "");
     $("toast").innerHTML = "<span></span>"; $("toast").firstChild.textContent = t;
     $("toast").classList.add("hidden"); void $("toast").offsetWidth; $("toast").classList.remove("hidden");
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { $("toast").classList.add("hidden"); }, 2600);
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { $("toast").classList.add("hidden"); }, ms || 2600);
   }
 
   function updateNow(j) {
@@ -2249,7 +2309,7 @@
     isPlaying = !!j.playing && j.mode !== "sleeping";
     paintPP();
     $("liveNow").classList.toggle("hidden", !j.nowPlaying);
-    $("liveNowT").textContent = (isPlaying ? "" : "Paused · ") + (j.nowPlaying || "");
+    $("liveNowT").textContent = (isPlaying ? "" : "Paused Â· ") + (j.nowPlaying || "");
     if (curVideo !== (j.videoId || "") || curShelf !== (j.shelfId || "")) {
       curVideo = j.videoId || ""; curShelf = j.shelfId || "";
       renderList();
@@ -2434,7 +2494,7 @@
     var list = shelf ? shelf.ids.map(function (id) { return byId[id]; }).filter(Boolean) : lib.videos;
     if (!list.length) {
       var p = document.createElement("p"); p.className = "empty";
-      p.textContent = lib.videos.length ? "No videos in this one yet." : "No videos saved on her phone yet. Add them in the app on her phone (Manage → Add videos).";
+      p.textContent = lib.videos.length ? "No videos in this one yet." : "No videos saved on her phone yet. Add them in the app on her phone (Manage â†’ Add videos).";
       box.appendChild(p); return;
     }
     list.forEach(function (v, i) {
@@ -2450,7 +2510,7 @@
       if (v.id === curVideo) bits.push("Playing now");
       if (v.dur) bits.push(mins(v.dur));
       if (v.dur && v.pos > 5000) bits.push(Math.round(100 * v.pos / v.dur) + "% watched");
-      sm.textContent = bits.join(" · ");
+      sm.textContent = bits.join(" Â· ");
       t.appendChild(name); t.appendChild(sm);
       if (v.dur && v.pos > 5000) {
         var mini = document.createElement("div"); mini.className = "mini";
@@ -2488,16 +2548,18 @@
   // Save her phone's battery: stop the camera when this iPhone screen is off / app hidden.
   document.addEventListener("visibilitychange", function () {
     if ($("viewer").classList.contains("hidden")) return;
-    if (document.hidden) stopStream(); else { pollInfo(); startStream(); }
+    if (document.hidden) stopStream(); else { if (RELAY) Relay.check(); pollInfo(); startStream(); }
   });
   // iOS sometimes restores the app from memory instead of reloading it: reconnect right away.
   window.addEventListener("pageshow", function (e) {
-    if (e.persisted && !$("viewer").classList.contains("hidden")) { fails = 0; pollInfo(); startStream(); }
+    if (e.persisted && !$("viewer").classList.contains("hidden")) { fails = 0; if (RELAY) Relay.check(); pollInfo(); startStream(); }
   });
+  // switched from Wi-Fi to cell (left home / work) or the signal came back: reconnect now
+  window.addEventListener("online", function () { if (RELAY) Relay.check(); fails = 0; pollInfo(); });
 
-  $("foot").textContent = RELAY ? "Connected from anywhere · end-to-end encrypted" : "Connected to " + location.host + " on your Wi-Fi";
-  $("sub").textContent = RELAY ? "From anywhere · encrypted" : "Home Wi-Fi · HD";
-  if (RELAY) Relay.onstate = function (up) { if (!up) setMode("Connecting to the relay…", "i-globe", false); };
+  $("foot").textContent = RELAY ? "Connected from anywhere Â· end-to-end encrypted" : "Connected to " + location.host + " on your Wi-Fi";
+  $("sub").textContent = RELAY ? "From anywhere Â· encrypted" : "Home Wi-Fi Â· HD";
+  if (RELAY) Relay.onstate = function (up) { if (!up) setMode("Connecting to the relayâ€¦", "i-globe", false); };
   // Her phone lets this iPhone in without a code on your own Wi-Fi / hotspot.
   // Only if she turned "Require a code" on do we ask for one.
   if (code) startViewer();

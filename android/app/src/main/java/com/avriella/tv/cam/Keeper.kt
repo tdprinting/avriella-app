@@ -23,6 +23,10 @@ class KeeperJob : JobService() {
         if (!CamState.running) {
             Log.i("AvriellaCam", "watchdog: connection was down, starting it again")
             App.startCam(applicationContext)
+        } else {
+            // running, but cut off from the internet relay for a long time: start the relay over
+            val r = RelayClient.instance
+            if (r != null && !CamState.relay && System.currentTimeMillis() - r.downSince > 5 * 60_000L) r.kick("watchdog")
         }
         return false
     }

@@ -125,7 +125,9 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             val path = full.substringBefore('?')
             val query = parseQuery(full.substringAfter('?', ""))
             val out = sock.getOutputStream()
-            val authed = query["key"] == Library.settings.camCode ||
+            val ip = sock.inetAddress?.hostAddress ?: ""
+            val given = query["key"]
+            val authed = (!given.isNullOrEmpty() && Guard.check(ip, given, Library.settings.camCode)) ||
                 (!Library.settings.camRequireCode && isLocal(sock.inetAddress))
             if (authed) when (query["cam"]) { "back" -> cam.select(true); "front" -> cam.select(false) }
             when (path) {
@@ -266,8 +268,45 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
 
     private fun denied(out: OutputStream) {
         android.util.Log.i("AvriellaRemote", "refused a request: wrong or missing code")
-        Thread.sleep(1200) // slows down code guessing
+        // Slows down code guessing: one refusal at a time for the whole phone, so firing many
+        // guesses at once doesn't help. Extra guesses while one is being refused are just dropped.
+        if (!Guard.slow.tryLock()) return
+        try { Thread.sleep(1200) } finally { Guard.slow.unlock() }
         send(out, 401, "application/json", "{\"error\":\"wrong code\"}".toByteArray())
+    }
+
+    /**
+     * Protects the 6-digit code from guessing: after 8 wrong codes from one address in 10 minutes,
+     * that address is shut out for 15 minutes (even if it then gets the code right).
+     */
+    object Guard {
+        val slow = java.util.concurrent.locks.ReentrantLock()
+        private class Tries(var n: Int, var since: Long, var lockedUntil: Long = 0)
+        private val tries = HashMap<String, Tries>()
+
+        fun check(ip: String, given: String, code: String): Boolean {
+            val now = System.currentTimeMillis()
+            synchronized(tries) {
+                val t = tries[ip]
+                if (t != null && t.lockedUntil > now) return false
+            }
+            // compare in constant time, so response timing gives nothing away
+            val ok = code.isNotEmpty() && java.security.MessageDigest.isEqual(given.toByteArray(), code.toByteArray())
+            // requests from the internet relay arrive from her phone itself and were already proven
+            // genuine by their encryption key, so they never lock anyone out
+            if (ip == "127.0.0.1" || ip == "::1") return ok
+            synchronized(tries) {
+                if (ok) { tries.remove(ip); return true }
+                if (tries.size > 500) tries.entries.removeAll { it.value.lockedUntil < now && now - it.value.since > 600_000L }
+                val t = tries.getOrPut(ip) { Tries(0, now) }
+                if (now - t.since > 600_000L) { t.n = 0; t.since = now }
+                if (++t.n >= 8) {
+                    t.lockedUntil = now + 15 * 60_000L; t.n = 0; t.since = now
+                    android.util.Log.w("AvriellaRemote", "too many wrong codes from $ip: shut out for 15 minutes")
+                }
+            }
+            return false
+        }
     }
 
     private fun info(): String {
@@ -306,6 +345,8 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             put("addrs", org.json.JSONArray(Wake.addresses().filter { !it.startsWith("127.") }))
             put("tailscale", Wake.tailscale() ?: "")
             put("relay", CamState.relay)
+            // false = Android's battery saver may cut her phone off the internet while it sleeps
+            put("batteryOk", (ctx.getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isIgnoringBatteryOptimizations(ctx.packageName))
             put("talking", CamState.talking)
             put("call", Call.state)
         }.toString()
