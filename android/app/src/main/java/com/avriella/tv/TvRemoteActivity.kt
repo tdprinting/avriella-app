@@ -47,6 +47,14 @@ class TvRemoteActivity : ParentActivity() {
     private lateinit var tvKeys: View
     private lateinit var fill: TextView
     private lateinit var picker: View
+    private lateinit var ctl: LinearLayout
+    private lateinit var tip: View
+
+    private fun SeekBar.tint(c: Int) {
+        val t = android.content.res.ColorStateList.valueOf(c)
+        progressTintList = t; thumbTintList = t
+        progressBackgroundTintList = android.content.res.ColorStateList.valueOf(0x33000000)
+    }
 
     override fun build() {
         titleView.text = "📺 TV remote"
@@ -61,14 +69,16 @@ class TvRemoteActivity : ParentActivity() {
         col.addView(where); col.addView(title)
         head.addView(col, lp(0, WRAP, 1f))
         top.addView(head)
+        ctl = vbox().apply { visibility = View.GONE }
+        top.addView(ctl)
 
         // scrub through the movie
-        seek = SeekBar(this).apply { max = 1000 }
-        top.addView(seek, lp(MATCH, dp(44), t = dp(14)))
+        seek = SeekBar(this).apply { max = 1000; tint(Pal.ORANGE) }
+        ctl.addView(seek, lp(MATCH, dp(44), t = dp(14)))
         val times = hbox()
         pos = label("0:00", 13f, Pal.SUB); dur = label("", 13f, Pal.SUB).apply { gravity = Gravity.END }
         times.addView(pos, lp(0, WRAP, 1f)); times.addView(dur, lp(0, WRAP, 1f))
-        top.addView(times)
+        ctl.addView(times)
         seek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             override fun onProgressChanged(s: SeekBar, p: Int, user: Boolean) { if (user) pos.text = formatTime((st.optDouble("dur", 0.0) * p).toLong()) }
             override fun onStartTrackingTouch(s: SeekBar) { seeking = true }
@@ -89,16 +99,16 @@ class TvRemoteActivity : ParentActivity() {
         }
         tr.addView(pp, lp(0, WRAP, 1.4f, l = dp(6), r = dp(6)))
         tr.addView(pill("30 ⏩", Pal.CARD, Pal.INK, 17f) { jump(30) }, lp(0, WRAP, 1f, l = dp(6)))
-        top.addView(tr, lp(t = dp(14)))
+        ctl.addView(tr, lp(t = dp(14)))
 
         // volume of the movie, and the TV's own volume
         val vr = hbox().apply { gravity = Gravity.CENTER_VERTICAL }
         vr.addView(label("🔈", 18f))
-        vol = SeekBar(this).apply { max = 100; progress = 100 }
+        vol = SeekBar(this).apply { max = 100; progress = 100; tint(Pal.PURPLE) }
         vr.addView(vol, lp(0, dp(44), 1f))
         vr.addView(label("🔊", 18f))
         volRow = vr
-        top.addView(vr, lp(t = dp(10)))
+        ctl.addView(vr, lp(t = dp(10)))
         vol.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
             private val send = Runnable { cmd("volume", "%.2f".format(java.util.Locale.US, vol.progress / 100.0)) }
             override fun onProgressChanged(s: SeekBar, p: Int, user: Boolean) { if (user) { volTouched = System.currentTimeMillis(); main.removeCallbacks(send); main.postDelayed(send, 150) } }
@@ -110,7 +120,7 @@ class TvRemoteActivity : ParentActivity() {
         keys.addView(pill("−", Pal.CARD, Pal.INK, 20f) { cmd("voldown") }, lp(dp(64), WRAP, r = dp(8)))
         keys.addView(pill("+", Pal.CARD, Pal.INK, 20f) { cmd("volup") }, lp(dp(64), WRAP))
         tvKeys = keys
-        top.addView(keys, lp(t = dp(8)))
+        ctl.addView(keys, lp(t = dp(8)))
 
         // fill screen, change movie, stop
         val acts = hbox()
@@ -118,7 +128,7 @@ class TvRemoteActivity : ParentActivity() {
         acts.addView(fill, lp(0, WRAP, 1f, r = dp(5)))
         acts.addView(pill("🎬  Change", Pal.PURPLE, sp = 15f) { picker.visibility = if (picker.visibility == View.VISIBLE) View.GONE else View.VISIBLE }, lp(0, WRAP, 1f, l = dp(5), r = dp(5)))
         acts.addView(pill("⏹  Stop", 0xFFE85D5D.toInt(), sp = 15f) { cmd("stop"); main.postDelayed({ finish() }, 400) }, lp(0, WRAP, 1f, l = dp(5)))
-        top.addView(acts, lp(t = dp(16)))
+        ctl.addView(acts, lp(t = dp(16)))
         body.addView(top, lp(t = dp(6)))
 
         // change movie: tap another DVD and it starts on the same TV
@@ -140,7 +150,8 @@ class TvRemoteActivity : ParentActivity() {
         strip.addView(row)
         picker = strip
         body.addView(strip, lp(MATCH, WRAP))
-        body.addView(label("Tip: if the TV says to press OK for sound, press OK on its remote once.", 13f, Pal.SUB).apply { setPadding(dp(4), dp(10), dp(4), 0) })
+        tip = label("Tip: if the TV says to press OK for sound, press OK on its remote once.", 13f, Pal.SUB).apply { setPadding(dp(4), dp(10), dp(4), 0); visibility = View.GONE }
+        body.addView(tip)
     }
 
     private fun jump(by: Int) = cmd("seek", "%.1f".format(java.util.Locale.US, maxOf(0.0, st.optDouble("pos", 0.0) + by)))
@@ -163,14 +174,24 @@ class TvRemoteActivity : ParentActivity() {
 
     private fun show(s: JSONObject) {
         st = s
-        if (!s.optBoolean("active")) { where.text = "Nothing is playing on a TV right now."; title.text = ""; return }
+        val on = s.optBoolean("active")
+        ctl.visibility = if (on) View.VISIBLE else View.GONE
+        tip.visibility = ctl.visibility
+        if (!on) {
+            picker.visibility = View.GONE; coverBox.removeAllViews(); coverBox.visibility = View.GONE; coverFor = ""
+            where.text = "Nothing is playing on a TV right now."
+            title.text = "Open a DVD on the shelf and pick a TV to watch it there."
+            title.textSize = 16f
+            return
+        }
+        title.textSize = 20f
         val state = s.optString("state")
         where.text = (when (state) { "paused" -> "Paused on "; "buffering" -> "Loading on "; else -> "Playing on " }) + s.optString("tv", "the TV") +
             if (s.optBoolean("muted")) " · press OK on the TV remote for sound" else ""
         title.text = s.optString("title")
         val vid = s.optString("video")
         if (vid.isNotEmpty() && vid != coverFor) {
-            Library.videos[vid]?.let { v -> coverFor = vid; coverBox.removeAllViews(); coverBox.addView(DvdCase(this, v, Pal.ORANGE).apply { isClickable = false }, lp(MATCH, WRAP)) }
+            Library.videos[vid]?.let { v -> coverFor = vid; coverBox.removeAllViews(); coverBox.visibility = View.VISIBLE; coverBox.addView(DvdCase(this, v, Pal.ORANGE).apply { isClickable = false }, lp(MATCH, WRAP)) }
         }
         val p = s.optDouble("pos", 0.0); val d = s.optDouble("dur", 0.0)
         if (!seeking) {
