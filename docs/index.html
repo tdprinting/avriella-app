@@ -274,6 +274,57 @@
   .vid .go .i { width: 16px; height: 16px; }
   .vid .mini { height: 3px; border-radius: 3px; background: var(--surface-3); margin-top: 7px; overflow: hidden; }
   .vid .mini i { display: block; height: 100%; background: var(--glow); }
+  /* the backup TV remote */
+  .remote-entry { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; min-height: 0; color: var(--ink); }
+  .remote-entry .re-ico { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--glow); color: var(--on-glow); flex: none; }
+  .remote-entry .re-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .remote-entry small { color: var(--sub); font-weight: 600; margin-top: 2px; }
+  .remote-entry .re-go { color: var(--sub); }
+  .remote { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: calc(env(safe-area-inset-top) + 10px) 18px calc(env(safe-area-inset-bottom) + 18px);
+    background: radial-gradient(120% 70% at 50% 0%, #2a2350 0%, #0d0e1f 60%, #07070f 100%); animation: fade .25s ease both; user-select: none; -webkit-user-select: none; }
+  .remote.hidden { display: none; }
+  .rm-top { display: flex; align-items: center; justify-content: space-between; font-size: 20px; }
+  .rm-x { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; }
+  .rm-tvs { display: flex; gap: 8px; overflow-x: auto; padding: 14px 0 4px; scrollbar-width: none; }
+  .rm-tvs::-webkit-scrollbar { display: none; }
+  .rm-tvs button { flex: none; min-height: 0; padding: 9px 15px; border-radius: 999px; background: var(--surface-2); font-size: 13.5px; font-weight: 700; color: var(--sub); }
+  .rm-tvs button.on { background: var(--glow); color: var(--on-glow); }
+  .rm-msg { min-height: 18px; margin: 6px 2px 4px; font-size: 12.5px; font-weight: 600; color: var(--sub); text-align: center; }
+  .rm-msg.err { color: #ffb4b4; }
+  .rm-body { width: 100%; max-width: 360px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+  .rm-body button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; transition: transform .08s, background .15s; }
+  .rm-body button:active, .rm-body button.down { transform: scale(.92); background: var(--surface-3); }
+  .rm-row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; justify-items: center; align-items: center; }
+  .rm-row3 > button { width: 74px; height: 74px; min-height: 0; padding: 0; border-radius: 50%; background: var(--surface-2); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 3px; font-size: 22px; box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 20px rgba(0,0,0,.35); }
+  .rm-row3 > button small { font-size: 10px; font-weight: 700; color: var(--sub); letter-spacing: .02em; }
+  .rm-power span { color: #ff8a8a; }
+  .rm-pp svg { width: 18px; height: 18px; margin: 0 -2px; }
+  .rm-pp { flex-direction: row !important; gap: 0 !important; }
+  .rm-pad { position: relative; width: min(78vw, 290px); aspect-ratio: 1; margin: 2px auto; border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, rgba(255,255,255,.13), rgba(255,255,255,.05) 70%); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 18px 40px rgba(0,0,0,.45); }
+  .rm-pad button { position: absolute; min-height: 0; padding: 0; background: transparent; border-radius: 22px; color: var(--ink); font-size: 44px; font-weight: 300; display: grid; place-items: center; }
+  .rm-pad button span { display: block; line-height: 1; }
+  .rp-up { left: 33%; right: 33%; top: 2%; height: 31%; } .rp-up span { transform: rotate(90deg); }
+  .rp-down { left: 33%; right: 33%; bottom: 2%; height: 31%; } .rp-down span { transform: rotate(-90deg); }
+  .rp-left { top: 33%; bottom: 33%; left: 2%; width: 31%; }
+  .rp-right { top: 33%; bottom: 33%; right: 2%; width: 31%; } .rp-right span { transform: rotate(180deg); }
+  .rm-pad .rp-ok { left: 31%; top: 31%; width: 38%; height: 38%; border-radius: 50%; background: var(--glow); color: var(--on-glow); font-size: 20px; font-weight: 800;
+    box-shadow: 0 8px 24px rgba(247,143,179,.35); }
+  .rm-pad .rp-ok:active, .rm-pad .rp-ok.down { background: var(--glow); filter: brightness(1.1); }
+  .rm-low > button { width: 60px; height: 60px; font-size: 19px; }
+  .rm-vol { display: flex; flex-direction: column; align-items: center; width: 74px; border-radius: 40px; background: var(--surface-2); padding: 4px 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 20px rgba(0,0,0,.35); }
+  .rm-vol button { width: 74px; height: 56px; min-height: 0; padding: 0; background: transparent; border-radius: 30px; font-size: 28px; font-weight: 500; }
+  .rm-vol small { font-size: 10px; font-weight: 800; color: var(--sub); letter-spacing: .08em; }
+  .rm-type { display: flex; gap: 8px; }
+  .rm-type input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 14px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font: inherit; font-size: 15px; }
+  .rm-type button { min-height: 0; height: 44px; padding: 0 14px; border-radius: 14px; background: var(--surface-2); font-weight: 700; }
+  .rm-type button[type=submit] { background: var(--glow); color: var(--on-glow); }
+  .rm-apps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .rm-apps button { min-height: 0; padding: 12px 6px; border-radius: 14px; background: var(--surface-2); font-size: 12.5px; font-weight: 700; }
+  .rm-apps button.shelf { background: var(--glow); color: var(--on-glow); }
   /* the TV control center */
   #castBox .mini-case { width: 54px; flex: none; aspect-ratio: 2 / 3; border-radius: 5px; }
   .tvrange { -webkit-appearance: none; appearance: none; width: 100%; height: 34px; margin: 10px 0 0; background: transparent; touch-action: none; }
@@ -754,6 +805,11 @@
 
   <!-- PLAY -->
   <div class="panel hidden" data-tab="play">
+    <button class="card remote-entry" id="remoteOpen">
+      <span class="re-ico"><svg class="i"><use href="#i-tv"/></svg></span>
+      <span class="re-txt"><b>TV remote</b><small>Control the Fire TVs from here</small></span>
+      <svg class="i sm re-go"><use href="#i-next"/></svg>
+    </button>
     <div class="card hidden" id="nowBox">
       <div class="nowrow">
         <div class="thumb" id="nowThumbWrap"><img id="nowThumb" alt=""></div>
@@ -944,6 +1000,49 @@
     <small>Turn your brightness all the way up. Tap anywhere to turn it off.</small>
     <small>For the real flashlight: swipe down from the top-right corner and tap the flashlight.</small>
     <button id="lsHer"><svg class="i sm"><use href="#i-torch"/></svg>Light up her phone too</button>
+  </div>
+</div>
+
+<div class="remote hidden" id="remote" role="dialog" aria-label="TV remote">
+  <div class="rm-top">
+    <b>TV remote</b>
+    <button class="rm-x" id="rmClose" aria-label="Close"><svg class="i"><use href="#i-close"/></svg></button>
+  </div>
+  <div class="rm-tvs" id="rmTvs"></div>
+  <div class="rm-msg" id="rmMsg">Looking for Fire TVs…</div>
+  <div class="rm-body">
+    <div class="rm-row3">
+      <button data-k="power" class="rm-power" aria-label="Power"><span>⏻</span><small>Power</small></button>
+      <button data-k="home" aria-label="Home"><svg class="i"><use href="#i-home"/></svg><small>Home</small></button>
+      <button data-k="menu" aria-label="Options"><span>☰</span><small>Options</small></button>
+    </div>
+    <div class="rm-pad" id="rmPad">
+      <button data-k="up" data-rep="1" class="rp-up" aria-label="Up"><span>‹</span></button>
+      <button data-k="left" data-rep="1" class="rp-left" aria-label="Left"><span>‹</span></button>
+      <button data-k="right" data-rep="1" class="rp-right" aria-label="Right"><span>‹</span></button>
+      <button data-k="down" data-rep="1" class="rp-down" aria-label="Down"><span>‹</span></button>
+      <button data-k="ok" class="rp-ok" aria-label="OK">OK</button>
+    </div>
+    <div class="rm-row3">
+      <button data-k="back" aria-label="Back"><span>↩</span><small>Back</small></button>
+      <button data-k="playpause" class="rm-pp" aria-label="Play or pause"><svg class="i"><use href="#i-play"/></svg><svg class="i"><use href="#i-pause"/></svg></button>
+      <button data-k="mute" aria-label="Mute"><svg class="i"><use href="#i-vol-down"/></svg><small>Mute</small></button>
+    </div>
+    <div class="rm-row3 rm-low">
+      <button data-k="rew" data-rep="1" aria-label="Rewind"><span>⏪</span></button>
+      <div class="rm-vol">
+        <button data-k="voldown" data-rep="1" aria-label="Volume down">−</button>
+        <small>VOL</small>
+        <button data-k="volup" data-rep="1" aria-label="Volume up">+</button>
+      </div>
+      <button data-k="ff" data-rep="1" aria-label="Fast forward"><span>⏩</span></button>
+    </div>
+    <form class="rm-type" id="rmType" autocomplete="off">
+      <input id="rmText" placeholder="Type on the TV (search…)" enterkeyhint="send" autocapitalize="off" spellcheck="false">
+      <button type="button" data-k="del" aria-label="Delete a letter">⌫</button>
+      <button type="submit">Send</button>
+    </form>
+    <div class="rm-apps" id="rmApps"></div>
   </div>
 </div>
 
@@ -2954,6 +3053,83 @@
     }).catch(function (e) { $("tvMsg").textContent = e.message || "The TV didn't start it."; })
       .then(function () { btn.disabled = false; });
   }
+  // ---------- the backup TV remote (Fire TVs) ----------
+  var rmHost = "", rmTvList = [], rmChain = Promise.resolve(), rmBusy = 0, rmMoved = false;
+  function rmSay(t, err) { var m = $("rmMsg"); m.textContent = t || ""; m.classList.toggle("err", !!err); }
+  function rmStore(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  function rmSend(path, extra) {
+    if (!rmHost) { rmSay("Pick a TV first.", true); return Promise.resolve(); }
+    var host = rmHost;
+    // one press after another, in order, so arrows never arrive jumbled
+    rmChain = rmChain.then(function () {
+      rmBusy++;
+      if (rmBusy === 1) setTimeout(function () { if (rmBusy) rmSay("Connecting to the TV… if it asks \"Allow debugging?\", press OK on its remote."); }, 1500);
+      return cjson(path, "&host=" + encodeURIComponent(host) + (extra || ""))
+        .then(function () { rmSay(""); }, function (e) { rmSay(e.message || "The TV didn't answer.", true); })
+        .then(function () { rmBusy--; });
+    });
+    return rmChain;
+  }
+  function rmKey(k) { return rmSend("rkey", "&key=" + k); }
+  function rmPickTv(host) {
+    rmHost = host; rmStore("rmHost", host);
+    [].forEach.call($("rmTvs").children, function (b) { b.classList.toggle("on", b.dataset.host === host); });
+    var apps = $("rmApps"); apps.innerHTML = "";
+    var sh = mk("button", "shelf", apps); sh.textContent = "📀 Her DVD shelf";
+    sh.onclick = function () { rmSend("rshelf"); };
+    cjson("rapps", "&host=" + encodeURIComponent(host)).then(function (j) {
+      if (rmHost !== host) return;
+      (j.apps || []).forEach(function (a) { var b = mk("button", "", apps); b.textContent = a.name; b.onclick = function () { rmSend("rlaunch", "&pkg=" + encodeURIComponent(a.pkg)); }; });
+    }).catch(function () {});
+  }
+  function rmLoad(fresh) {
+    rmSay("Looking for Fire TVs…");
+    cjson("rtvs", fresh ? "&fresh=1" : "").then(function (j) {
+      rmTvList = j.tvs || [];
+      var row = $("rmTvs"); row.innerHTML = "";
+      if (!rmTvList.length) { rmSay("No Fire TVs found. Make sure they're on and on the same Wi-Fi as her phone.", true); }
+      else rmSay("");
+      rmTvList.forEach(function (t) { var b = mk("button", "", row); b.textContent = t.name; b.dataset.host = t.host; b.onclick = function () { rmPickTv(t.host); }; });
+      var again = mk("button", "", row); again.textContent = "↻"; again.setAttribute("aria-label", "Look again"); again.onclick = function () { rmLoad(true); };
+      var want = rmHost || rmStore("rmHost");
+      var pick = rmTvList.filter(function (t) { return t.host === want; })[0] || rmTvList[0];
+      if (pick) rmPickTv(pick.host);
+    }).catch(function (e) { rmSay(e.message || "Couldn't reach her phone.", true); });
+  }
+  $("remoteOpen").onclick = function () { $("remote").classList.remove("hidden"); rmLoad(false); };
+  $("rmClose").onclick = function () { $("remote").classList.add("hidden"); };
+  // buttons: tap to press; hold the arrows and volume to keep pressing
+  [].forEach.call(document.querySelectorAll("#remote [data-k]"), function (b) {
+    var t1 = null, t2 = null;
+    function stop() { clearTimeout(t1); clearInterval(t2); t1 = t2 = null; b.classList.remove("down"); }
+    b.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); b.classList.add("down");
+      if (navigator.vibrate) try { navigator.vibrate(8); } catch (x) {}
+      rmMoved = false;
+      if (b.dataset.k !== "ok") rmKey(b.dataset.k);   // OK waits for the finger to lift, so a swipe never selects
+      if (b.dataset.rep) t1 = setTimeout(function () { t2 = setInterval(function () { if (rmBusy < 3) rmKey(b.dataset.k); }, 160); }, 420);
+    });
+    b.addEventListener("pointerup", function () { if (b.dataset.k === "ok" && !rmMoved && b.classList.contains("down")) rmKey("ok"); });
+    ["pointerup", "pointercancel", "pointerleave"].forEach(function (ev) { b.addEventListener(ev, stop); });
+    b.addEventListener("click", function (e) { e.preventDefault(); });
+  });
+  // swipe anywhere on the round pad to move, like a touch remote
+  (function () {
+    var pad = $("rmPad"), sx = 0, sy = 0, moved = false;
+    pad.addEventListener("touchstart", function (e) { var t = e.touches[0]; sx = t.clientX; sy = t.clientY; moved = false; }, { passive: true });
+    pad.addEventListener("touchmove", function (e) {
+      var t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (Math.abs(dx) < 34 && Math.abs(dy) < 34) return;
+      moved = true; rmMoved = true; sx = t.clientX; sy = t.clientY;
+      rmKey(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up"));
+    }, { passive: true });
+  })();
+  $("rmType").onsubmit = function (e) {
+    e.preventDefault();
+    var t = $("rmText").value.trim(); if (!t) return;
+    rmSend("rtext", "&text=" + encodeURIComponent(t)).then(function () { $("rmText").value = ""; });
+  };
+
   // ---------- the TV control center ----------
   var castTimer = null, castState = null, seeking = false, volTouch = 0, castCoverId = "";
   function paintRange(r) { r.style.setProperty("--p", (100 * (r.value - r.min) / (r.max - r.min || 1)) + "%"); }

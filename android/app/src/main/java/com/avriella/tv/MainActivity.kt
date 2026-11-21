@@ -159,6 +159,9 @@ class MainActivity : ParentActivity() {
                 }, lp(MATCH, WRAP, t = dp(12)))
             }
             continueCard()?.let { body.addView(it, lp(t = dp(12))) }
+            body.addView(pill("🎮  TV remote — control the Fire TVs", Pal.CARD, Pal.INK, 16f) {
+                startActivity(Intent(this, FireRemoteActivity::class.java))
+            }, lp(MATCH, WRAP, t = dp(12)))
 
             val shows = Library.shows()
             body.addView(badge("📺", "Shows", Pal.BLUE))

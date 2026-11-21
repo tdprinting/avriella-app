@@ -220,6 +220,15 @@ object Cast {
     }
 
     /** Her TV page's address for a TV on this network. */
+    /** Fire TVs on the Wi-Fi (name and address), for the backup remote. */
+    fun fireTvs(ctx: Context): List<Tv> {
+        scan(ctx, 3000)
+        return tvs.filter { it.kind == "firetv" || it.kind == "web" }
+    }
+
+    /** Her DVD shelf page for a TV at this address. */
+    fun pageForHost(host: String, name: String): String? = pageFor(Tv("", name, "firetv", host, 0))
+
     private fun pageFor(tv: Tv): String? {
         val mine = Wake.addresses().filter { !it.startsWith("100.") }
         val prefix = tv.host.substringBeforeLast('.')

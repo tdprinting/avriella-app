@@ -66,12 +66,93 @@ object Adb {
         }
     } catch (e: Exception) { Log.i(TAG, "adb $host: ${e.message}"); null }
 
+    // ---------- a shell kept open on each TV, so remote button presses land straight away ----------
+
+    private class Live(val host: String, val s: Socket, val out: OutputStream, val inp: DataInputStream) {
+        @Volatile var alive = true
+        @Volatile var lastUsed = System.currentTimeMillis()
+        @Volatile var remote = 0
+        val okay = java.util.concurrent.Semaphore(0)
+        val opened = java.util.concurrent.CountDownLatch(1)
+
+        fun start(): Boolean {
+            s.soTimeout = 0
+            Thread {
+                try {
+                    while (alive) {
+                        val m = read(inp)
+                        when (m.cmd) {
+                            OKAY -> if (remote == 0) { remote = m.arg0; opened.countDown() } else okay.release()
+                            WRTE -> send(out, OKAY, 1, m.arg0, ByteArray(0))   // the shell's echo: just say thanks
+                            CLSE -> { alive = false }
+                        }
+                    }
+                } catch (_: Exception) { alive = false } finally { opened.countDown(); close() }
+            }.apply { isDaemon = true }.start()
+            send(out, OPEN, 1, 0, "shell:\u0000".toByteArray())
+            opened.await(5, java.util.concurrent.TimeUnit.SECONDS)
+            if (remote == 0) { alive = false; close() }
+            return alive
+        }
+
+        fun run(cmd: String): Boolean = synchronized(this) {
+            if (!alive) return false
+            okay.drainPermits()
+            return try {
+                send(out, WRTE, 1, remote, (cmd + "\n").toByteArray())
+                lastUsed = System.currentTimeMillis()
+                okay.tryAcquire(4, java.util.concurrent.TimeUnit.SECONDS).also { if (!it) { alive = false; close() } }
+            } catch (_: Exception) { alive = false; close(); false }
+        }
+
+        fun close() { try { s.close() } catch (_: Exception) {} }
+    }
+
+    private val lives = java.util.concurrent.ConcurrentHashMap<String, Live>()
+
+    /**
+     * Runs a quick command on the TV through a shell that stays open (no handshake each time).
+     * Returns "ok", or why it couldn't ("off" = ADB debugging is off, "denied" = nobody pressed OK on the TV).
+     */
+    fun quick(ctx: Context, host: String, cmd: String): String {
+        val now = System.currentTimeMillis()
+        lives.values.filter { now - it.lastUsed > 10 * 60_000 }.forEach { it.alive = false; it.close(); lives.remove(it.host) }
+        for (attempt in 0..1) {
+            var l = lives[host]
+            if (l == null || !l.alive) {
+                if (!portOpen(host)) return "off"
+                l = connect(ctx, host) ?: return "denied"
+                lives[host] = l
+            }
+            if (l.run(cmd)) return "ok"
+            lives.remove(host)
+        }
+        return "denied"
+    }
+
+    private fun connect(ctx: Context, host: String): Live? = try {
+        val s = Socket(); s.connect(InetSocketAddress(host, 5555), 3000); s.tcpNoDelay = true
+        s.soTimeout = 8000
+        val inp = DataInputStream(s.getInputStream()); val out = s.getOutputStream()
+        send(out, CNXN, 0x01000000, 256 * 1024, "host::\u0000".toByteArray())
+        var m = read(inp)
+        var sentKey = false; var signed = false; var ok = true
+        while (m.cmd == AUTH) {
+            if (!signed) { send(out, AUTH, 2, 0, sign(ctx, m.data)); signed = true }
+            else if (!sentKey) { send(out, AUTH, 3, 0, publicKey(ctx)); sentKey = true; s.soTimeout = 30_000 }
+            else { ok = false; break }
+            m = read(inp)
+        }
+        if (!ok || m.cmd != CNXN) { s.close(); null }
+        else Live(host, s, out, inp).takeIf { it.start() }
+    } catch (e: Exception) { Log.i(TAG, "adb live $host: ${e.message}"); null }
+
     private class Msg(val cmd: Int, val arg0: Int, val arg1: Int, val data: ByteArray)
 
     private fun send(out: OutputStream, cmd: Int, a0: Int, a1: Int, data: ByteArray) {
         val b = ByteBuffer.allocate(24 + data.size).order(ByteOrder.LITTLE_ENDIAN)
         b.putInt(cmd).putInt(a0).putInt(a1).putInt(data.size).putInt(data.sumOf { it.toInt() and 0xFF }).putInt(cmd xor -1).put(data)
-        out.write(b.array()); out.flush()
+        synchronized(out) { out.write(b.array()); out.flush() }
     }
 
     private fun read(inp: DataInputStream): Msg {

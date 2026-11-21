@@ -172,6 +172,19 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     send(out, 200, "application/json", (if (u != null) JSONObject().put("url", u) else JSONObject().put("error", "That video isn't on her phone anymore.")).toString().toByteArray())
                 } else denied(out)
                 "/api/cast/status" -> if (authed) send(out, 200, "application/json", Cast.status().toString().toByteArray()) else denied(out)
+                // ---- backup remote for the Fire TVs ----
+                "/api/cast/rtvs" -> if (authed) send(out, 200, "application/json", JSONObject().put("tvs", FireRemote.tvs(ctx, query["fresh"] == "1")).toString().toByteArray()) else denied(out)
+                "/api/cast/rapps" -> if (authed) send(out, 200, "application/json", JSONObject().put("apps", FireRemote.apps(ctx, query["host"] ?: "")).toString().toByteArray()) else denied(out)
+                "/api/cast/rkey", "/api/cast/rtext", "/api/cast/rlaunch", "/api/cast/rshelf" -> if (authed) {
+                    val h = query["host"] ?: ""
+                    val res = when (path) {
+                        "/api/cast/rkey" -> FireRemote.key(ctx, h, query["key"] ?: "")
+                        "/api/cast/rtext" -> FireRemote.text(ctx, h, query["text"] ?: "")
+                        "/api/cast/rlaunch" -> FireRemote.launch(ctx, h, query["pkg"] ?: "")
+                        else -> FireRemote.shelf(ctx, h)
+                    }
+                    send(out, 200, "application/json", (if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)).toString().toByteArray())
+                } else denied(out)
                 "/manifest.json" -> asset(out, "web/manifest.json", "application/manifest+json")
                 "/icon.png", "/apple-touch-icon.png", "/icon-192.png", "/icon-512.png" -> {
                     val name = if (path.startsWith("/icon-")) path.drop(1) else "icon.png"
