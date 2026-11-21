@@ -113,6 +113,8 @@ class MainActivity : ParentActivity() {
         KidLock.exit(this)
         CamState.mode = "menu"
         super.onResume()
+        com.avriella.tv.ui.DvdOpen.clear(this)
+        com.avriella.tv.data.Covers.fetchMissing(this) // covers and disc art for any movies just added
         com.avriella.tv.cam.Remote.handler = remoteHandler
         if (Library.settings.camEnabled && !askedCamera &&
             checkSelfPermission(android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -151,6 +153,11 @@ class MainActivity : ParentActivity() {
             c.addView(pill("➕  Add videos", Pal.BLUE) { startActivity(Intent(this, ManageActivity::class.java)) }, lp(WRAP, WRAP))
             body.addView(c, lp(t = dp(12)))
         } else {
+            com.avriella.tv.cam.Cast.current()?.let { tv ->
+                body.addView(pill("📺  Now on $tv — TV remote", Pal.PURPLE, Color.WHITE, 17f) {
+                    startActivity(Intent(this, TvRemoteActivity::class.java))
+                }, lp(MATCH, WRAP, t = dp(12)))
+            }
             continueCard()?.let { body.addView(it, lp(t = dp(12))) }
 
             val shows = Library.shows()
@@ -216,8 +223,8 @@ class MainActivity : ParentActivity() {
         ).apply { cornerRadius = dpf(28f) }
         c.elevation = dpf(6f)
         val row = hbox()
-        val a = art(Pal.ORANGE, "▶", v, 0.6f, 14f, 28f)
-        row.addView(a, lp(dp(150), WRAP, r = dp(14)))
+        val a = com.avriella.tv.ui.DvdCase(this, v, Pal.ORANGE)
+        row.addView(a, lp(dp(96), WRAP, r = dp(16)))
         val col = vbox()
         col.addView(label("✨ KEEP WATCHING", 12f, 0xFFFFF3C4.toInt(), true))
         col.addView(label(v.title, 17f, Color.WHITE, true, 2))
@@ -225,7 +232,7 @@ class MainActivity : ParentActivity() {
         col.addView(ProgressLine(this, v.progress, 0xFFFFE14D.toInt(), 0x44FFFFFF), lp(MATCH, dp(6), t = dp(8)))
         row.addView(col, lp(0, WRAP, 1f))
         c.addView(row)
-        val go = pill("▶  Play for ${Library.settings.childName}", Pal.YELLOW, Pal.INK, 19f) { PlayerActivity.start(this, shelfId, v.id) }
+        val go = pill("▶  Play for ${Library.settings.childName}", Pal.YELLOW, Pal.INK, 19f) { com.avriella.tv.ui.DvdOpen.choose(this, a) { PlayerActivity.start(this, shelfId, v.id) } }
         go.breathe(0.03f)
         c.addView(go, lp(MATCH, WRAP, t = dp(12)))
         return c
@@ -247,14 +254,16 @@ class MainActivity : ParentActivity() {
         c.lift(dpf(5f), color)
         c.setPadding(dp(8), dp(8), dp(8), dp(16))
         c.setOnClickListener { onOpen() }
-        val a = art(blend(color, Color.WHITE, 0.25f), emoji, thumb, 0.62f, 18f, 46f)
+        // shows and playlists stand like DVD cases (the cover of their first video); games and sounds keep their picture
+        val dvd = thumb?.let { com.avriella.tv.ui.DvdCase(this, it, color) }
+        val a: FrameLayout = dvd ?: art(blend(color, Color.WHITE, 0.25f), emoji, thumb, 0.62f, 18f, 46f)
         if (onPlay != null) {
             val play = label("▶", 20f, color, true).apply {
                 gravity = Gravity.CENTER
                 background = rounded(Color.WHITE, dpf(24f), dp(3), Pal.YELLOW)
                 elevation = dpf(4f)
                 pressScale(0.85f)
-                setOnClickListener { onPlay() }
+                setOnClickListener { if (dvd != null) com.avriella.tv.ui.DvdOpen.play(this@MainActivity, dvd) { onPlay() } else onPlay() }
             }
             a.addView(play, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.BOTTOM or Gravity.END).apply { setMargins(0, 0, dp(8), dp(8)) })
         }

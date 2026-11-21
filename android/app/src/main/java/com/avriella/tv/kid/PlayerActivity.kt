@@ -163,7 +163,9 @@ class PlayerActivity : KidActivity() {
     /** Keep-level on: freeze the screen's orientation and let the picture turn instead. */
     private fun applyLevel() {
         val on = Library.settings.levelVideo
-        requestedOrientation = if (on) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
+        // LOCKED would freeze whichever way the phone faced when the show started (often portrait from the
+        // menu), leaving a little turning picture. Always lock wide instead; the picture still turns to stay level.
+        requestedOrientation = if (on) android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
             else android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         video.keepLevel = on
     }

@@ -42,6 +42,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".ShelfActivity" />
+        <activity android:name=".TvRemoteActivity" />
         <activity android:name=".ManageActivity" />
         <activity android:name=".EditShelfActivity" />
         <activity android:name=".LockSetupActivity" />

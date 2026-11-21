@@ -115,9 +115,11 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             val input = BufferedInputStream(sock.getInputStream())
             val line = readLine(input) ?: return
             var contentLength = 0
+            var range: String? = null
             while (true) {
                 val h = readLine(input) ?: break; if (h.isEmpty()) break
                 if (h.startsWith("content-length:", ignoreCase = true)) contentLength = h.substringAfter(':').trim().toIntOrNull() ?: 0
+                if (h.startsWith("range:", ignoreCase = true)) range = h.substringAfter(':').trim()
             }
             val parts = line.split(" ")
             if (parts.size < 2) return
@@ -130,8 +132,46 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
             val authed = (!given.isNullOrEmpty() && Guard.check(ip, given, Library.settings.camCode)) ||
                 (!Library.settings.camRequireCode && isLocal(sock.inetAddress))
             if (authed) when (query["cam"]) { "back" -> cam.select(true); "front" -> cam.select(false) }
+            // A TV playing one of her videos: only with the one-off secret link, and only from the home network.
+            if (path.startsWith("/media/")) {
+                val token = path.removePrefix("/media/").substringBefore('/')
+                val vid = Cast.videoFor(token)
+                if (vid == null || !isLocal(sock.inetAddress)) send(out, 404, "text/plain", "Not found".toByteArray())
+                else {
+                    // smooth playback: big send buffer, full-size packets, no Wi-Fi power saving while a TV is watching
+                    try { sock.sendBufferSize = 2 shl 20; sock.tcpNoDelay = false; sock.soTimeout = 60_000 } catch (_: Exception) {}
+                    Streaming.begin(ctx)
+                    try { media(java.io.BufferedOutputStream(out, 512 * 1024), vid, parts[0] == "HEAD", range) } finally { Streaming.end() }
+                }
+                return
+            }
             when (path) {
                 "/", "/index.html" -> asset(out, "web/index.html", "text/html; charset=utf-8")
+                // ---- play her videos on a TV in the house ----
+                "/api/cast/scan" -> if (authed) send(out, 200, "application/json", JSONObject().put("tvs", Cast.scan(ctx)).toString().toByteArray()) else denied(out)
+                "/api/cast/play" -> if (authed) {
+                    val res = Cast.play(ctx, query["tv"] ?: "", query["video"] ?: "")
+                    send(out, 200, "application/json", (if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)).toString().toByteArray())
+                } else denied(out)
+                "/api/cast/control" -> if (authed) {
+                    val res = Cast.control(query["action"] ?: "", query["value"])
+                    send(out, 200, "application/json", (if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)).toString().toByteArray())
+                } else denied(out)
+                // her TV page, for TVs with a web browser (Fire TV's Silk browser and others)
+                "/tv", "/tv/", "/tv.html" -> asset(out, "web/tv.html", "text/html; charset=utf-8")
+                "/api/tv/poll" -> if (authed && isLocal(sock.inetAddress)) {
+                    val st = JSONObject().put("state", query["state"] ?: "idle").put("video", query["video"] ?: "")
+                        .put("pos", query["pos"]?.toDoubleOrNull() ?: 0.0).put("dur", query["dur"]?.toDoubleOrNull() ?: 0.0)
+                        .put("vol", query["vol"]?.toDoubleOrNull() ?: 1.0).put("fill", query["fill"] == "1").put("muted", query["muted"] == "1")
+                    val wait = (query["wait"]?.toLongOrNull() ?: 0L).coerceIn(0, 20_000)
+                    val c = Cast.webPoll(query["id"] ?: "", query["name"] ?: "TV", ip, st, wait)
+                    send(out, 200, "application/json", c.toString().toByteArray())
+                } else denied(out)
+                "/api/tv/link" -> if (authed && isLocal(sock.inetAddress)) {
+                    val u = Cast.webLink(query["video"] ?: "")
+                    send(out, 200, "application/json", (if (u != null) JSONObject().put("url", u) else JSONObject().put("error", "That video isn't on her phone anymore.")).toString().toByteArray())
+                } else denied(out)
+                "/api/cast/status" -> if (authed) send(out, 200, "application/json", Cast.status().toString().toByteArray()) else denied(out)
                 "/manifest.json" -> asset(out, "web/manifest.json", "application/manifest+json")
                 "/icon.png", "/apple-touch-icon.png", "/icon-192.png", "/icon-512.png" -> {
                     val name = if (path.startsWith("/icon-")) path.drop(1) else "icon.png"
@@ -152,6 +192,19 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                     send(out, 200, "application/json", json.toByteArray())
                 } else denied(out)
                 "/api/thumb" -> if (authed) thumb(out, query["id"] ?: "") else denied(out)
+                "/api/cover" -> if (authed) {
+                    val f = com.avriella.tv.data.Covers.file(ctx, query["id"] ?: "")
+                    if (f.exists()) send(out, 200, "image/jpeg", f.readBytes())
+                    else {
+                        Library.videos[query["id"] ?: ""]?.let { com.avriella.tv.data.Covers.fetch(ctx, it) }
+                        send(out, 404, "text/plain", "no cover yet".toByteArray())
+                    }
+                } else denied(out)
+                "/api/disc" -> if (authed) {
+                    val f = Library.videos[query["id"] ?: ""]?.let { com.avriella.tv.data.Covers.disc(ctx, it) }
+                    if (f != null && f.exists()) send(out, 200, "image/png", f.readBytes())
+                    else send(out, 404, "text/plain", "no disc".toByteArray())
+                } else denied(out)
                 "/api/control" -> if (authed) {
                     val res = Remote.send(Remote.Cmd(query["action"] ?: "", query["video"], query["shelf"], query["value"]))
                     android.util.Log.i("AvriellaRemote", "${sock.inetAddress?.hostAddress} ${query["action"]} ${query["value"] ?: query["video"] ?: ""} -> $res")
@@ -342,6 +395,7 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
         put("fullLock", com.avriella.tv.kid.KidLock.isFullLock(Library.appCtx))
             put("touch", when (CamState.touchLocked) { true -> "locked"; false -> "unlocked"; null -> "" })
             put("canWake", Wake.canLaunch())
+            put("canScreenOff", Wake.canScreenOff())
             put("addrs", org.json.JSONArray(Wake.addresses().filter { !it.startsWith("127.") }))
             put("tailscale", Wake.tailscale() ?: "")
             put("relay", CamState.relay)
@@ -455,6 +509,50 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
         if (bytes == null) send(out, 404, "text/plain", "Missing $name".toByteArray()) else send(out, 200, type, bytes)
     }
 
+    /** Streams a video file to a TV, with byte ranges so it can jump around and buffer. */
+    private fun media(out: OutputStream, videoId: String, head: Boolean, range: String?) {
+        val v = Library.videos[videoId] ?: return send(out, 404, "text/plain", "Not found".toByteArray())
+        val pfd = try { ctx.contentResolver.openFileDescriptor(android.net.Uri.parse(v.uri), "r") } catch (_: Exception) { null }
+            ?: return send(out, 404, "text/plain", "Not found".toByteArray())
+        pfd.use { fd ->
+            val size = fd.statSize
+            var start = 0L; var end = size - 1
+            val m = range?.let { Regex("bytes=(\\d*)-(\\d*)").find(it) }
+            val partial = m != null && size > 0
+            if (partial) {
+                val a = m!!.groupValues[1]; val b = m.groupValues[2]
+                if (a.isEmpty() && b.isNotEmpty()) { start = (size - b.toLong()).coerceAtLeast(0) }
+                else { start = a.toLongOrNull() ?: 0; if (b.isNotEmpty()) end = minOf(b.toLong(), size - 1) }
+                if (start >= size || start > end) {
+                    out.write("HTTP/1.1 416 Range Not Satisfiable\r\nContent-Range: bytes */$size\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".toByteArray()); out.flush(); return
+                }
+            }
+            val mime = Cast.mime(videoId)
+            val h = StringBuilder()
+            h.append(if (partial) "HTTP/1.1 206 Partial Content\r\n" else "HTTP/1.1 200 OK\r\n")
+            h.append("Content-Type: $mime\r\nAccept-Ranges: bytes\r\n")
+            if (size > 0) h.append("Content-Length: ${end - start + 1}\r\n")
+            if (partial) h.append("Content-Range: bytes $start-$end/$size\r\n")
+            // what DLNA TVs (Samsung, LG…) expect to see before they'll play a stream
+            h.append("transferMode.dlna.org: Streaming\r\ncontentFeatures.dlna.org: DLNA.ORG_OP=01;DLNA.ORG_CI=0;DLNA.ORG_FLAGS=01700000000000000000000000000000\r\n")
+            h.append("Access-Control-Allow-Origin: *\r\nConnection: close\r\n\r\n")
+            out.write(h.toString().toByteArray())
+            if (head) { out.flush(); return }
+            java.io.FileInputStream(fd.fileDescriptor).use { fin ->
+                val ch = fin.channel
+                if (start > 0) ch.position(start)
+                val buf = ByteArray(256 * 1024)
+                var left = if (size > 0) end - start + 1 else Long.MAX_VALUE
+                while (left > 0) {
+                    val r = fin.read(buf, 0, minOf(buf.size.toLong(), left).toInt())
+                    if (r < 0) break
+                    out.write(buf, 0, r); left -= r
+                }
+            }
+            out.flush()
+        }
+    }
+
     private fun send(out: OutputStream, code: Int, type: String, body: ByteArray) {
         val status = when (code) { 200 -> "OK"; 401 -> "Unauthorized"; 404 -> "Not Found"; else -> "Error" }
         out.write(
@@ -506,4 +604,36 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
         iconCache = bos.toByteArray()
         return iconCache!!
     }
+}
+
+/**
+ * While a TV is streaming one of her videos: keep her phone's Wi-Fi at full speed (no power-saving
+ * naps that make the picture stutter) and the CPU awake even with her screen off.
+ */
+object Streaming {
+    private var count = 0
+    private var wifi: android.net.wifi.WifiManager.WifiLock? = null
+    private var cpu: android.os.PowerManager.WakeLock? = null
+    private val stopLater = android.os.Handler(android.os.Looper.getMainLooper())
+    private val release = Runnable { synchronized(this) { if (count == 0) { try { wifi?.release() } catch (_: Exception) {}; try { cpu?.release() } catch (_: Exception) {} } } }
+
+    fun begin(ctx: android.content.Context) = synchronized(this) {
+        count++
+        stopLater.removeCallbacks(release)
+        try {
+            if (wifi == null) {
+                val wm = ctx.applicationContext.getSystemService(android.content.Context.WIFI_SERVICE) as android.net.wifi.WifiManager
+                @Suppress("DEPRECATION")
+                val mode = if (android.os.Build.VERSION.SDK_INT >= 29) android.net.wifi.WifiManager.WIFI_MODE_FULL_LOW_LATENCY else android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF
+                wifi = wm.createWifiLock(mode, "avriella:tv-stream").apply { setReferenceCounted(false) }
+                cpu = (ctx.applicationContext.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager)
+                    .newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "avriella:tv-stream").apply { setReferenceCounted(false) }
+            }
+            if (wifi?.isHeld != true) wifi?.acquire()
+            if (cpu?.isHeld != true) cpu?.acquire(4 * 3600_000L)
+        } catch (_: Exception) {}
+    }
+
+    // the TV asks for the next piece every so often: keep the locks a little while between pieces
+    fun end() = synchronized(this) { count = maxOf(0, count - 1); if (count == 0) stopLater.postDelayed(release, 90_000) }
 }

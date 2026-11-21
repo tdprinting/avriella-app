@@ -49,6 +49,28 @@ object Wake {
         } catch (e: Exception) { android.util.Log.w("AvriellaRemote", "couldn't bring the app forward", e) }
     }
 
+    // ---------- screen off ----------
+    private val dpm get() = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+    private val admin get() = android.content.ComponentName(ctx, com.avriella.tv.kid.AdminReceiver::class.java)
+
+    /** True once "Allow screen off" was approved on her phone (Android needs that once, for the app to switch the screen off). */
+    fun canScreenOff(): Boolean = try { dpm.isAdminActive(admin) } catch (_: Exception) { false }
+
+    /** The screen Android shows to approve "Allow screen off". */
+    fun screenOffSetupIntent(): Intent = Intent(android.app.admin.DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+        .putExtra(android.app.admin.DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+        .putExtra(android.app.admin.DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+            "Lets you turn her screen off from your iPhone. Avriella TV only ever uses this to switch the screen off.")
+
+    /** Switches her screen off completely (a show pauses first; sleep sounds keep playing). */
+    fun screenOff(): String {
+        if (!canScreenOff()) return "To turn her screen off from here, allow it once on her phone: Manage → Baby cam → Allow screen off."
+        return Remote.onMain {
+            if (CamState.mode == "watching") try { Remote.handler?.invoke(Remote.Cmd("pause")) } catch (_: Exception) {}
+            try { dpm.lockNow(); "ok" } catch (e: SecurityException) { "Her phone didn't allow turning the screen off." }
+        } ?: "Her phone didn't answer."
+    }
+
     /** Wakes her phone and waits (off the main thread) until a screen is ready for commands. */
     fun wakeAndWait(timeoutMs: Long = 5000): Boolean {
         if (ready()) return true

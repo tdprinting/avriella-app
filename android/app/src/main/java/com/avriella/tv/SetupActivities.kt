@@ -204,15 +204,19 @@ class CamSetupActivity : ParentActivity() {
             val i = Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:$packageName"))
             try { startActivity(i) } catch (_: Exception) { toast("Open Settings → Apps → Avriella TV → Battery → Unrestricted") }
         }, lp(MATCH, WRAP, t = dp(8)))
+        val offOk = com.avriella.tv.cam.Wake.canScreenOff()
+        w.addView(pill(if (offOk) "✅  Screen off is allowed" else "3.  Allow screen off  (turn it off from your iPhone)", if (offOk) Pal.CARD else Pal.GREEN, if (offOk) Pal.INK else android.graphics.Color.WHITE) {
+            if (!offOk) try { startActivity(com.avriella.tv.cam.Wake.screenOffSetupIntent()) } catch (_: Exception) { toast("Couldn't open that setting on this phone.") }
+        }, lp(MATCH, WRAP, t = dp(8)))
         w.addView(label("Leaving her phone on the charger overnight is best: the connection stays on all the time so you can check in whenever you like.", 13f, Pal.SUB).apply { setPadding(0, dp(10), 0, 0) })
         body.addView(w)
 
         body.addView(section("Privacy"))
         val p = card(16)
-        p.addView(label("Only someone on your Wi-Fi who knows the code can watch. Change the code if you ever share it by mistake. Android shows a green dot at the top while the camera is in use.", 14f, Pal.SUB))
+        p.addView(label((if (s.camRequireCode) "Only someone on your Wi-Fi who knows the code can watch." else "\"Require a code\" is off, so anyone on your Wi-Fi can open the baby cam. Turn it on above if guests use your Wi-Fi.") + " Change the code if you ever share it by mistake. Android shows a green dot at the top while the camera is in use.", 14f, Pal.SUB))
         p.addView(pill("🔁  Make a new code", Pal.CARD, Pal.INK) {
             confirm("New code?", "Both iPhones will need the new code.", "Change") {
-                s.camCode = (100000..999999).random().toString(); Library.save(); rebuild()
+                s.camCode = (100000 + java.security.SecureRandom().nextInt(900000)).toString(); Library.save(); rebuild()
             }
         }, lp(MATCH, WRAP, t = dp(10)))
         body.addView(p)

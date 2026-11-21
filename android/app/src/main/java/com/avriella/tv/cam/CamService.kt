@@ -51,6 +51,7 @@ class CamService : Service() {
         mdns = MdnsResponder(applicationContext).also { it.start() }
         relay = RelayClient(applicationContext).also { it.start() }
         CamState.running = true
+        com.avriella.tv.data.Covers.fetchMissing(applicationContext) // DVD covers for any new videos
     }
 
     private var notification: Notification? = null

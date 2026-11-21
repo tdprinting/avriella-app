@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Avriella TV</title>
+<style>
+  :root { --bg: #10132a; --card: #1d2142; --card2: #272c56; --ink: #f5f3ff; --sub: #b9b8d6; --sun: #ffcf3a; --sky: #4e8fea; --peach: #ff9b6b; --focus: #ffd84d; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+  body { background: radial-gradient(1200px 600px at 85% -10%, #2a3b7a 0%, transparent 60%), radial-gradient(900px 500px at 0% 110%, #3a2350 0%, transparent 60%), var(--bg); }
+  #home { height: 100%; display: flex; flex-direction: column; padding: 3.5vh 4vw 0; }
+  header { display: flex; align-items: center; gap: 1.6vw; }
+  .sun { width: 5.2vh; height: 5.2vh; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe27a, var(--sun)); box-shadow: 0 0 4vh #ffcf3a88; flex: none; }
+  h1 { font-size: 4.4vh; margin: 0; font-weight: 900; letter-spacing: -.02em; }
+  #status { margin-left: auto; font-size: 2.1vh; color: var(--sub); }
+  #tabs { display: flex; gap: 1vw; margin: 3vh 0 2.4vh; overflow: hidden; flex: none; }
+  .tab { padding: 1.2vh 2vw; border-radius: 99px; background: var(--card); color: var(--sub); font-size: 2.4vh; font-weight: 700; white-space: nowrap; border: .35vh solid transparent; }
+  .tab.on { background: var(--ink); color: #15172e; }
+  #grid { flex: 1; overflow: hidden; position: relative; }
+  /* a 3D shelf of DVDs */
+  #grid { perspective: 160vh; perspective-origin: 50% 20%; }
+  #rows { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3.4vh 2vw; padding: 3vh 2vw 8vh; transition: transform .3s ease; transform-style: preserve-3d; }
+  .tile { position: relative; transition: transform .3s cubic-bezier(.2,.8,.25,1); transform-style: preserve-3d; transform: rotateY(14deg); transform-origin: 50% 100%; }
+  .tile b { display: block; padding: 1.6vh .3vw 0; font-size: 2.1vh; line-height: 1.25; height: 6.6vh; overflow: hidden; text-align: center; color: var(--sub); }
+  .tile.focus b { color: var(--ink); }
+  .plank { position: absolute; left: -2vw; right: -2vw; height: 3.2vh; transform: translateY(-.4vh); pointer-events: none; z-index: -1;
+    background: linear-gradient(#e1aa6b, #c48545 35%, #9c6431 70%, #6e4220); border-radius: .6vh; box-shadow: 0 2vh 3vh #0009, inset 0 .3vh 0 #f3c48c; }
+  .case { position: relative; aspect-ratio: 2 / 3; border-radius: 1vh; overflow: hidden; background: linear-gradient(160deg, #3a4fa0, #22296b) center/cover no-repeat;
+    box-shadow: -1.2vh 1.4vh 2.6vh #000a, 0 .3vh .6vh #0006; outline: .5vh solid transparent; outline-offset: .3vh; transition: outline-color .2s; }
+  .case.nocover { background-size: contain; background-color: #2b3576; }
+  .case .ct { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 .6vw 1.4vh .9vw; color: #fff; font-size: 2vh; font-weight: 800; text-align: center;
+    text-shadow: 0 .2vh .6vh #000b; display: none; }
+  .case.nocover .ct { display: block; }
+  .case i { position: absolute; left: 0; bottom: 0; height: .7vh; background: var(--peach); z-index: 2; }
+  .case::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 7.5%; z-index: 1;
+    background: linear-gradient(90deg, rgba(14,15,26,.93), rgba(70,75,102,.6) 35%, rgba(18,19,31,.8) 70%, rgba(0,0,0,.2)); }
+  .case::after { content: ""; position: absolute; inset: 0; z-index: 1; box-shadow: inset 0 0 0 .3vh rgba(255,255,255,.2);
+    background: linear-gradient(140deg, rgba(255,255,255,.25), rgba(255,255,255,.06) 22%, transparent 40%, transparent 80%, rgba(255,255,255,.08)); }
+  .tile.focus { transform: rotateY(0deg) translateZ(6vh) translateY(-2.4vh); z-index: 1; }
+  .tile.focus .case { outline-color: var(--focus); box-shadow: 0 3vh 6vh #000b; }
+  .focus { outline: none; }
+  .tab.focus { border-color: var(--focus); }
+  /* picking one: the case flies up, opens on its spine, the disc slides out and spins */
+  .dvdfx { position: fixed; inset: 0; z-index: 9; background: rgba(0,0,0,0); transition: background .38s ease, opacity .3s ease; }
+  .dvdfx.dim { background: rgba(0,0,0,.72); }
+  .dvdfx .stage { position: absolute; transform-origin: 0 0; perspective: 1400px; }
+  .dvdfx .tray { position: absolute; inset: 0; border-radius: 1vh; background: #1b2e6b; box-shadow: inset 0 0 0 .3vh rgba(255,255,255,.3), 0 2vh 4vh #0008; }
+  .dvdfx .lid { position: absolute; inset: 0; transform-origin: 0 50%; transform-style: preserve-3d; }
+  .dvdfx .lid > div { position: absolute; inset: 0; border-radius: 1vh; overflow: hidden; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .dvdfx .lid .case { width: 100%; height: 100%; outline: 0; box-shadow: none; }
+  .dvdfx .lid .inside { transform: rotateY(180deg); background: #22397f; box-shadow: inset 0 0 0 .3vh rgba(255,255,255,.3); }
+  .dvdfx .lid .inside::after { content: ""; position: absolute; inset: 6%; border-radius: .6vh; background: rgba(255,255,255,.12); }
+  .dvdfx .disc { position: absolute; border-radius: 50%; box-shadow: 0 1vh 3vh #0009; background: #dfe4ee center / cover no-repeat; }
+  #empty { color: var(--sub); font-size: 2.6vh; padding: 4vh 0; }
+  #player { position: fixed; inset: 0; background: #000; display: none; z-index: 10; }
+  #player video { width: 100%; height: 100%; object-fit: contain; background: #000; }
+  #osd { position: fixed; left: 0; right: 0; bottom: 0; padding: 6vh 4vw 5vh; background: linear-gradient(transparent, #000c); transition: opacity .4s; }
+  #osd b { font-size: 3.4vh; display: block; margin-bottom: 2vh; }
+  .bar { height: .9vh; border-radius: 99px; background: #fff3; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--sun); }
+  .times { display: flex; justify-content: space-between; color: #ddd; font-size: 2.1vh; margin-top: 1.2vh; }
+  #hint { position: fixed; inset: 0; z-index: 11; display: none; place-items: center; background: #000a; font-size: 3.6vh; font-weight: 800; text-align: center; }
+  #sound { position: fixed; z-index: 11; right: 3vw; top: 4vh; display: none; padding: 1.4vh 2.2vw; border-radius: 99px; background: #000b; color: #fff;
+    font-size: 2.6vh; font-weight: 800; border: .3vh solid var(--focus); }
+  #player.fill video { object-fit: cover; }
+  #code { position: fixed; inset: 0; z-index: 12; display: none; place-items: center; background: var(--bg); text-align: center; }
+  #code input { font-size: 6vh; width: 14ch; text-align: center; letter-spacing: .3em; padding: 1.5vh; border-radius: 2vh; border: .4vh solid var(--focus); background: var(--card); color: var(--ink); }
+  #code p { color: var(--sub); font-size: 2.6vh; }
+</style>
+</head>
+<body>
+<div id="home">
+  <header><div class="sun"></div><h1 id="title">Shows</h1><span id="status">Connecting to her phone…</span></header>
+  <div id="tabs"></div>
+  <div id="grid"><div id="rows"></div><div id="empty" style="display:none">No shows here yet.</div></div>
+</div>
+<div id="player"><video id="v" playsinline preload="auto" disablepictureinpicture></video>
+  <div id="osd"><b id="nowT"></b><div class="bar"><i id="nowBar"></i></div><div class="times"><span id="nowPos">0:00</span><span id="nowDur"></span></div></div>
+</div>
+<div id="sound">🔇 Press OK on the remote for sound</div>
+<div id="hint">Press OK ▶ on the remote to start</div>
+<div id="code"><div><h1>Her phone wants its code</h1><p>Type the 6-digit code from the Baby cam settings on her phone, then press OK.</p><input id="codeIn" inputmode="numeric" maxlength="6"></div></div>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  var q = new URLSearchParams(location.search);
+  if (/^\d{6}$/.test(q.get("key") || "")) store.set("tvKey", q.get("key"));
+  if (q.get("name")) store.set("tvName", q.get("name").slice(0, 40));
+  var key = store.get("tvKey") || "";
+  var id = store.get("tvId"); if (!id) { id = Math.random().toString(36).slice(2, 12); store.set("tvId", id); }
+  var name = store.get("tvName") || (/AFT|Silk/.test(navigator.userAgent) ? "Fire TV" : "TV browser");
+  function api(p, extra) { return "/api/" + p + "?key=" + encodeURIComponent(key) + (extra || "") + "&t=" + Date.now(); }
+  function fmt(s) { s = Math.max(0, Math.floor(s || 0)); var h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, x = s % 60; return (h ? h + ":" + (m < 10 ? "0" : "") : "") + m + ":" + (x < 10 ? "0" : "") + x; }
+
+  // ---------- library ----------
+  var COLS = 7, opening = false;
+  var lib = null, shelf = 0, focus = { area: "grid", i: 0 }, list = [], vids = {};
+  function load() {
+    fetch(api("library"), { cache: "no-store" }).then(function (r) {
+      if (r.status === 401) { askCode(); throw new Error("code"); }
+      return r.json();
+    }).then(function (j) {
+      lib = j; vids = {}; (j.videos || []).forEach(function (v) { vids[v.id] = v; });
+      $("status").textContent = "From her phone";
+      draw();
+    }).catch(function (e) { if (e.message !== "code") { $("status").textContent = "Can't reach her phone. Trying again…"; setTimeout(load, 5000); } });
+  }
+  function shelves() {
+    var s = (lib.shelves || []).filter(function (x) { return x.ids && x.ids.length; });
+    return [{ name: "All shows", ids: (lib.videos || []).map(function (v) { return v.id; }) }].concat(s);
+  }
+  function draw() {
+    var sh = shelves(); shelf = Math.min(shelf, sh.length - 1);
+    $("tabs").innerHTML = "";
+    sh.forEach(function (s, i) {
+      var t = document.createElement("div"); t.className = "tab" + (i === shelf ? " on" : "");
+      t.textContent = (s.emoji ? s.emoji + "  " : "") + s.name; $("tabs").appendChild(t);
+    });
+    list = sh[shelf].ids.filter(function (x) { return vids[x]; });
+    $("rows").innerHTML = "";
+    $("empty").style.display = list.length ? "none" : "block";
+    list.forEach(function (vid) {
+      var v = vids[vid], t = document.createElement("div"); t.className = "tile";
+      var th = document.createElement("div"); th.className = "case";
+      var ct = document.createElement("div"); ct.className = "ct"; ct.textContent = v.title; th.appendChild(ct);
+      cover(th, vid);
+      if (v.dur && v.pos) { var p = document.createElement("i"); p.style.width = Math.min(100, 100 * v.pos / v.dur) + "%"; th.appendChild(p); }
+      var b = document.createElement("b"); b.textContent = v.title;
+      t.appendChild(th); t.appendChild(b);
+      $("rows").appendChild(t);
+    });
+    planks();
+    if (focus.i >= list.length) focus.i = Math.max(0, list.length - 1);
+    paintFocus();
+  }
+  // the wooden shelf each row of DVDs stands on
+  function planks() {
+    Array.prototype.forEach.call(document.querySelectorAll(".plank"), function (e) { e.remove(); });
+    var kids = $("rows").children;
+    for (var i = 0; i < kids.length; i += COLS) {
+      var c = kids[i].querySelector(".case"), pl = document.createElement("div"); pl.className = "plank";
+      pl.style.top = (kids[i].offsetTop + c.offsetTop + c.offsetHeight) + "px";
+      $("rows").appendChild(pl);
+    }
+  }
+  window.addEventListener("resize", function () { if (lib) planks(); });
+  function apiUrl(p, vid) { return "/api/" + p + "?key=" + encodeURIComponent(key) + "&id=" + encodeURIComponent(vid); }
+  // the DVD cover her phone found; until there is one, a picture from the video in a plain case
+  var noCover = {};
+  function cover(el, vid) {
+    var thumb = function () { el.classList.add("nocover"); el.style.backgroundImage = "url('" + apiUrl("thumb", vid) + "'), linear-gradient(160deg, #3a4fa0, #22296b)"; };
+    if (noCover[vid] && Date.now() - noCover[vid] < 90000) return thumb();
+    var u = apiUrl("cover", vid), img = new Image();
+    img.onload = function () { el.classList.remove("nocover"); el.style.backgroundImage = "url('" + u + "')"; };
+    img.onerror = function () { noCover[vid] = Date.now(); thumb(); };
+    img.src = u;
+  }
+  // Picking a movie: the case flies to the middle, its front swings open, the disc slides out and spins.
+  function dvdOpen(tile, vid, then) {
+    var cs = tile && tile.querySelector(".case"), done = false, fx = null;
+    var finish = function () {
+      if (done) return; done = true; opening = false;
+      if (cs) cs.style.visibility = "";
+      then();
+      if (fx) { fx.style.opacity = "0"; setTimeout(function () { fx.remove(); }, 320); }
+    };
+    if (!cs || !document.body.animate) return finish();
+    var r = cs.getBoundingClientRect(), w = r.width, h = r.height, vw = innerWidth, vh = innerHeight;
+    if (!w) return finish();
+    opening = true;
+    var el = function (cls, parent) { var d = document.createElement("div"); d.className = cls; if (parent) parent.appendChild(d); return d; };
+    fx = el("dvdfx");
+    var stage = el("stage", fx);
+    stage.style.cssText = "left:" + r.left + "px;top:" + r.top + "px;width:" + w + "px;height:" + h + "px";
+    el("tray", stage);
+    var disc = el("disc", stage), d = w * 0.86;
+    disc.style.cssText = "width:" + d + "px;height:" + d + "px;left:" + (w - d) / 2 + "px;top:" + (h - d) / 2 + "px";
+    disc.style.backgroundImage = "url('" + apiUrl("disc", vid) + "')";
+    var lid = el("lid", stage);
+    var front = cs.cloneNode(true); front.style.visibility = ""; el("front", lid).appendChild(front);
+    el("inside", lid);
+    document.body.appendChild(fx);
+    cs.style.visibility = "hidden";
+    void fx.offsetWidth; fx.classList.add("dim");
+    var s = Math.min(vw * 0.25 / w, vh * 0.62 / h);
+    var tx = vw / 2 - w * s * 0.37 - r.left, ty = (vh - h * s) / 2 - r.top;
+    var go = function (node, frames, ms, ease, next) {
+      if (done) return;
+      node.animate(frames, { duration: ms, easing: ease, fill: "forwards" }).onfinish = next;
+    };
+    var out = "translate(" + w * 0.62 + "px," + -h * 0.06 + "px) scale(1.12) ";
+    go(stage, [{ transform: "none" }, { transform: "translate(" + tx + "px," + ty + "px) scale(" + s + ")" }], 420, "cubic-bezier(.2,.8,.25,1)", function () {
+      go(lid, [{ transform: "rotateY(0deg)" }, { transform: "rotateY(-150deg)" }], 560, "ease-in-out", function () {
+        go(disc, [{ transform: "translate(0,0) scale(1) rotate(0deg)" }, { transform: out + "rotate(540deg)" }], 700, "cubic-bezier(.3,1.35,.5,1)", function () {
+          go(disc, [{ transform: out + "rotate(540deg)" }, { transform: out + "rotate(900deg)" }], 420, "linear", finish);
+        });
+      });
+    });
+    setTimeout(finish, 4500);   // never leave it stuck
+  }
+  function paintFocus() {
+    Array.prototype.forEach.call(document.querySelectorAll(".focus"), function (e) { e.classList.remove("focus"); });
+    if (focus.area === "tabs") { var t = $("tabs").children[shelf]; if (t) t.classList.add("focus"); $("rows").style.transform = ""; return; }
+    var el = $("rows").children[focus.i]; if (!el || !el.classList.contains("tile")) return;
+    el.classList.add("focus");
+    // keep the focused row on screen
+    var row = Math.floor(focus.i / COLS), h = el.offsetHeight + innerHeight * 0.034;
+    var visible = Math.max(1, Math.floor($("grid").clientHeight / h));
+    var top = Math.max(0, row - visible + 1);
+    $("rows").style.transform = "translateY(" + (-top * h) + "px)";
+  }
+
+  // ---------- player ----------
+  var v = $("v"), cur = null, osdT = null, wantPlay = false;
+  function play(vid, from) {
+    var info = vids[vid] || { title: "" };
+    fetch(api("tv/link", "&video=" + encodeURIComponent(vid)), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (j) {
+      if (!j.url) throw new Error(j.error || "no link");
+      cur = vid; $("nowT").textContent = info.title || "";
+      $("player").style.display = "block"; $("home").style.display = "none";   // nothing drawn behind the movie
+      v.src = j.url; v.currentTime = from || 0;
+      if (history.state !== "playing") history.pushState("playing", "");
+      start(); osd(); report();
+    }).catch(function () { $("status").textContent = "Couldn't play that one."; });
+  }
+  // Silk won't start a video with sound until someone presses a button: start it muted so it plays
+  // straight away, and the first press of the remote turns the sound on (and goes full screen).
+  var autoMuted = false;
+  function unmute() {
+    if (autoMuted) { autoMuted = false; v.muted = false; $("sound").style.display = "none"; report(); }
+    try { if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(function () {}); } catch (e) {}
+  }
+  function start() {
+    wantPlay = true;
+    var p = v.play();
+    if (p && p.catch) p.then(function () { $("hint").style.display = "none"; }).catch(function () {
+      if (v.muted) { $("hint").style.display = "grid"; return; }
+      autoMuted = true; v.muted = true;
+      var q = v.play();
+      if (q && q.then) q.then(function () { $("hint").style.display = "none"; $("sound").style.display = "block"; report(); })
+        .catch(function () { autoMuted = false; v.muted = false; $("hint").style.display = "grid"; });
+    });
+  }
+
+  function stop(fromBack) {
+    v.pause(); v.removeAttribute("src"); v.load(); cur = null; wantPlay = false;
+    $("player").style.display = "none"; $("hint").style.display = "none"; $("home").style.display = ""; $("sound").style.display = "none";
+    if (!fromBack && history.state === "playing") history.back();
+    report(); load();
+  }
+  // the controls over the movie: shown briefly, then taken off the screen entirely
+  // (even an invisible layer over the video can make a TV draw it less smoothly)
+  function osd() {
+    var o = $("osd"); o.style.display = ""; void o.offsetWidth; o.style.opacity = 1; clearTimeout(osdT);
+    osdT = setTimeout(function () {
+      if (v.paused) return;
+      o.style.opacity = 0;
+      osdT = setTimeout(function () { if (!v.paused) o.style.display = "none"; }, 450);
+    }, 3500);
+  }
+  v.addEventListener("timeupdate", function () {
+    if ($("osd").style.display === "none") return;
+    var d = v.duration || 0;
+    $("nowPos").textContent = fmt(v.currentTime); $("nowDur").textContent = d ? fmt(d) : "";
+    $("nowBar").style.width = d ? (100 * v.currentTime / d) + "%" : "0";
+  });
+  v.addEventListener("pause", function () { osd(); report(); });
+  v.addEventListener("playing", function () { $("hint").style.display = "none"; osd(); report(); });
+  v.addEventListener("ended", function () {
+    // carry on with the next show in this shelf
+    var i = list.indexOf(cur);
+    if (i >= 0 && i + 1 < list.length) play(list[i + 1]); else stop();
+  });
+  window.addEventListener("popstate", function () { if (cur) stop(true); });
+
+  // ---------- remote control keys ----------
+  document.addEventListener("keydown", function (e) {
+    if (cur) unmute();
+    var k = e.key, code = e.keyCode;
+    if ($("code").style.display === "grid") return;
+    if (cur) {
+      if (k === "Enter" || k === " " || k === "MediaPlayPause" || code === 179 || code === 13) { if (v.paused) start(); else { v.pause(); wantPlay = false; } }
+      else if (k === "ArrowRight" || k === "MediaFastForward" || code === 228) v.currentTime = Math.min((v.duration || 1e9) - 1, v.currentTime + 10);
+      else if (k === "ArrowLeft" || k === "MediaRewind" || code === 227) v.currentTime = Math.max(0, v.currentTime - 10);
+      else if (k === "Escape" || k === "Backspace" || k === "GoBack") { stop(); }
+      else return;
+      osd(); e.preventDefault(); return;
+    }
+    if (opening) { e.preventDefault(); return; }
+    if (!lib) return;
+    var n = list.length, sh = shelves().length;
+    if (focus.area === "tabs") {
+      if (k === "ArrowLeft" && shelf > 0) { shelf--; focus.i = 0; draw(); }
+      else if (k === "ArrowRight" && shelf < sh - 1) { shelf++; focus.i = 0; draw(); }
+      else if ((k === "ArrowDown" || k === "Enter") && n) { focus.area = "grid"; paintFocus(); }
+      else return;
+    } else {
+      if (k === "ArrowRight" && focus.i < n - 1) focus.i++;
+      else if (k === "ArrowLeft" && focus.i % COLS > 0) focus.i--;
+      else if (k === "ArrowDown" && focus.i + COLS < n) focus.i += COLS;
+      else if (k === "ArrowDown" && Math.floor(focus.i / COLS) < Math.floor((n - 1) / COLS)) focus.i = n - 1;
+      else if (k === "ArrowUp" && focus.i >= COLS) focus.i -= COLS;
+      else if (k === "ArrowUp") focus.area = "tabs";
+      else if (k === "Enter" || code === 13) { openAt(focus.i); e.preventDefault(); return; }
+      else return;
+      paintFocus();
+    }
+    e.preventDefault();
+  });
+  // a mouse / touch screen works too
+  $("rows").addEventListener("click", function (e) {
+    var t = e.target.closest(".tile"); if (!t) return;
+    if (opening) return;
+    focus.i = Array.prototype.indexOf.call($("rows").children, t); focus.area = "grid"; paintFocus(); openAt(focus.i);
+  });
+  function openAt(i) {
+    var vid = list[i]; if (!vid) return;
+    dvdOpen($("rows").children[i], vid, function () { play(vid, (vids[vid].pos || 0) / 1000); });
+  }
+  $("tabs").addEventListener("click", function (e) {
+    var t = e.target.closest(".tab"); if (!t) return;
+    shelf = Array.prototype.indexOf.call($("tabs").children, t); focus.i = 0; draw();
+  });
+  $("hint").addEventListener("click", start);
+
+  // ---------- code ----------
+  function askCode() {
+    $("code").style.display = "grid"; $("codeIn").value = ""; $("codeIn").focus();
+  }
+  $("codeIn").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" && e.keyCode !== 13) return;
+    var c = $("codeIn").value.replace(/\D/g, "");
+    if (c.length !== 6) return;
+    key = c; store.set("tvKey", c); $("code").style.display = "none"; load(); poll();
+  });
+
+  // ---------- the parents' iPhones can start and steer videos here ----------
+  function state() {
+    if (!cur) return "idle";
+    if (v.ended) return "ended";
+    if (v.paused) return wantPlay ? "buffering" : "paused";
+    return v.readyState < 3 ? "buffering" : "playing";
+  }
+  var reportT = null;
+  function report() { clearTimeout(reportT); reportT = setTimeout(function () { fetch(pollUrl(0)).catch(function () {}); }, 150); }
+  function pollUrl(wait) {
+    return api("tv/poll", "&id=" + id + "&name=" + encodeURIComponent(name) + "&state=" + state() + "&video=" + encodeURIComponent(cur || "") +
+      "&pos=" + (v.currentTime || 0).toFixed(1) + "&dur=" + (v.duration || 0).toFixed(1) + "&vol=" + (v.muted ? 0 : v.volume).toFixed(2) +
+      "&fill=" + ($("player").classList.contains("fill") ? 1 : 0) + "&muted=" + (autoMuted ? 1 : 0) + "&wait=" + wait);
+  }
+  var polling = false;
+  function poll() {
+    if (polling) return;
+    // hidden behind another app: don't take commands (her phone will bring this page back to the front)
+    if (document.hidden) { setTimeout(poll, 1500); return; }
+    polling = true;
+    fetch(pollUrl(12000), { cache: "no-store" }).then(function (r) {
+      if (r.status === 401) { polling = false; askCode(); throw new Error("code"); }
+      return r.json();
+    }).then(function (c) {
+      polling = false;
+      if (c.cmd === "play" && c.video) { if (!vids[c.video] && c.title) vids[c.video] = { title: c.title }; play(c.video, 0); }
+      else if (c.cmd === "pause" && cur) { v.pause(); wantPlay = false; }
+      else if (c.cmd === "resume" && cur) start();
+      else if (c.cmd === "seek" && cur) v.currentTime = +c.to || 0;
+      else if (c.cmd === "volume" && cur) { v.volume = Math.max(0, Math.min(1, +c.level || 0)); if (!autoMuted) v.muted = +c.level <= 0; osd(); report(); }
+      else if (c.cmd === "fill" && cur) { $("player").classList.toggle("fill"); report(); }
+      else if (c.cmd === "stop" && cur) stop();
+      poll();
+    }).catch(function (e) { polling = false; if (e.message !== "code") setTimeout(poll, 3000); });
+  }
+  setInterval(function () { if (cur) report(); }, 5000);
+  load(); poll();
+})();
+</script>
+</body>
+</html>

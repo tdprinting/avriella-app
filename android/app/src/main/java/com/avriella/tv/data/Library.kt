@@ -73,7 +73,7 @@ object Library {
         load()
         restoreConnection()
         if (settings.camCode.isEmpty()) {
-            settings.camCode = (100000..999999).random().toString()
+            settings.camCode = (100000 + java.security.SecureRandom().nextInt(900000)).toString()
             save()
         }
         if (settings.relaySecret.isEmpty()) { settings.relaySecret = com.avriella.tv.cam.RelayClient.newSecret(); save() }
@@ -99,11 +99,27 @@ object Library {
         if (settings.lastVideoId == id) settings.lastVideoId = null
     }
 
+    private val videoExt = setOf("mp4", "mkv", "avi", "mov", "m4v", "webm", "wmv", "flv", "ts", "3gp", "mpg", "mpeg")
+    private val releaseTag = Regex("(?i)\\b(480p|720p|1080p|2160p|4k|uhd|hdr|x26[45]|h ?26[45]|hevc|web[- ]?dl|webrip|blu ?ray|brrip|bdrip|dvdrip|hdtv|remastered|extended|unrated|proper|repack|dual audio)\\b")
+
+    /** Looks like a downloaded file's name ("A.Bugs.Life.1998.1080p.BluRay.x265") rather than a real title. */
+    fun looksLikeFileName(t: String): Boolean =
+        releaseTag.containsMatchIn(t.replace('.', ' ')) || Regex("^[^\\s]+(\\.[^\\s.]+){3,}$").matches(t.trim())
+
+    /** "A.Bugs.Life.1998.1080p.BluRay.H.265" → "A Bugs Life (1998)". Real titles are left alone. */
     fun cleanTitle(name: String): String {
-        var t = name
+        var t = name.trim()
         val dot = t.lastIndexOf('.')
-        if (dot > 0 && t.length - dot <= 5) t = t.substring(0, dot)
-        return t.replace('_', ' ').trim().ifEmpty { "Video" }
+        if (dot > 0 && t.substring(dot + 1).lowercase() in videoExt) t = t.substring(0, dot)
+        if (!looksLikeFileName(t)) return t.replace('_', ' ').trim().ifEmpty { "Video" }
+        t = t.replace(Regex("[._]"), " ").replace(Regex("\\s+"), " ").trim()
+        val year = Regex("\\b(19[2-9]\\d|20[0-4]\\d)\\b").findAll(t).firstOrNull { it.range.first > 0 }
+        val tag = releaseTag.find(t)?.takeIf { it.range.first > 0 }
+        val cut = listOfNotNull(year?.range?.first, tag?.range?.first).minOrNull()
+        var base = (if (cut != null) t.substring(0, cut) else t)
+            .replace(Regex("[\\[(][^\\])]*[\\])]?"), " ").replace(Regex("[\\s\\-\\[(]+$"), "").replace(Regex("\\s+"), " ").trim()
+        if (base.isEmpty()) base = t
+        return if (year != null && cut == year.range.first) "$base (${year.value})" else base
     }
 
     // ---------- shelves ----------
@@ -225,11 +241,12 @@ object Library {
         // If the main file is missing or damaged, fall back to the last good copies (never start empty by accident).
         for (f in listOf(file, bak, bak2)) {
             if (!f.exists()) continue
-            if (loadFrom(f)) { if (f === bak) Log.w(TAG, "library restored from backup"); return }
+            if (loadFrom(f)) { if (f === bak) Log.w(TAG, "library restored from backup"); if (tidied) { tidied = false; save() }; return }
             videos.clear(); shelves.clear()
         }
     }
 
+    private var tidied = false
     private fun loadFrom(f: File): Boolean {
         try {
             val o = JSONObject(f.readText())
@@ -240,6 +257,11 @@ object Library {
                         j.getString("id"), j.getString("uri"), j.optString("title", "Video"),
                         j.optLong("dur"), j.optLong("pos"), j.optLong("last"), j.optLong("added"),
                     )
+                    // movies added before titles were tidied: "A.Bugs.Life.1998.1080p…" → "A Bugs Life (1998)"
+                    if (looksLikeFileName(v.title)) {
+                        val nice = cleanTitle(v.title)
+                        if (nice != v.title) { v.title = nice; tidied = true; try { Covers.forget(appCtx, v.id) } catch (_: Exception) {} }
+                    }
                     videos[v.id] = v
                 }
             }

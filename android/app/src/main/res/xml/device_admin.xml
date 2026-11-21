@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <device-admin xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-policies />
+    <uses-policies>
+        <!-- only used to switch her screen off from the parents' iPhones -->
+        <force-lock />
+    </uses-policies>
 </device-admin>

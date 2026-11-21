@@ -57,6 +57,7 @@ object Remote {
                 "ok"
             } ?: "Her phone didn't answer."
         }
+        if (cmd.action == "screenoff") return if (!Wake.screenOn) "ok" else Wake.screenOff()
         if (cmd.action == "wake") {
             // Turn the screen on, then also wake her up from the sleep screen if it's showing.
             if (!Wake.wakeAndWait()) return wakeHelp()
