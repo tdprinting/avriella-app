@@ -212,6 +212,7 @@ class FrontCamera(private val ctx: Context) {
                         override fun onConfigured(s: CameraCaptureSession) {
                             if (device !== cd) { try { s.close() } catch (_: Exception) {}; return } // an older camera we already closed
                             session = s
+                            fails = 0
                             try {
                                 s.setRepeatingRequest(request(cd, r), null, handler)
                             } catch (e: Exception) { error = "Camera error: ${e.message}" }
@@ -225,14 +226,33 @@ class FrontCamera(private val ctx: Context) {
                         handler?.postDelayed({ if (viewers > 0 && device == null) openCamera() }, 3000)
                     }
                 }
-                override fun onDisconnected(cd: CameraDevice) { cd.close(); if (device !== cd && device != null) return; device = null; holdsBack = false; error = "Camera was taken by another app" }
-                override fun onError(cd: CameraDevice, e: Int) { cd.close(); if (device !== cd && device != null) return; device = null; holdsBack = false; error = "Camera error $e" }
+                override fun onDisconnected(cd: CameraDevice) { cd.close(); if (device !== cd && device != null) return; device = null; holdsBack = false; error = "Camera was taken by another app – trying again…"; afterFail() }
+                override fun onError(cd: CameraDevice, e: Int) { cd.close(); if (device !== cd && device != null) return; device = null; holdsBack = false; error = "Camera error $e – trying again…"; afterFail() }
             }, handler)
         } catch (e: SecurityException) {
             error = "Camera permission is off"
         } catch (e: Exception) {
             error = "Camera error: ${e.message}"
         }
+    }
+
+    /**
+     * The camera dropped out. Never leave it broken: try again, a little slower each time.
+     * After her phone restarts (or the app updates) Android only lends the camera to Avriella TV
+     * while it's on screen, so bring it forward if the screen is on, or say what to do if it's off.
+     */
+    private var fails = 0
+    private fun afterFail() {
+        fails++
+        try { reader?.close() } catch (_: Exception) {}
+        reader = null; session = null
+        if (viewers <= 0 || CamState.inCall) return
+        if (!Wake.topResumed) {
+            if (Wake.screenOn && Wake.canLaunch()) android.os.Handler(android.os.Looper.getMainLooper()).post { Wake.bringForward() }
+            else if (fails >= 2) error = "Open Avriella TV on her phone once (or tap Wake) to turn the camera back on."
+        }
+        val wait = minOf(15_000L, 1200L * fails)
+        handler?.postDelayed({ if (viewers > 0 && device == null && !CamState.inCall) openCamera() }, wait)
     }
 
     private fun closeCamera() {

@@ -77,6 +77,7 @@ object FireRemote {
     /** Opens the connection to the TV ahead of the first press. */
     fun warm(ctx: Context, host: String): String {
         val t = tv(host) ?: return "Couldn't find that TV."
+        fastDevice(ctx, host)   // find the fast way now, so the first press is quick too
         return why(t, Adb.quick(ctx, host, ":"))
     }
 
@@ -89,9 +90,48 @@ object FireRemote {
     /** Presses one or more buttons ("up", "ok", "volup"…). */
     fun key(ctx: Context, host: String, keys: String): String {
         val t = tv(host) ?: return "Couldn't find that TV. Pull down to look again."
-        val codes = keys.split(',').mapNotNull { KEYS[it.trim()] }
-        if (codes.isEmpty()) return "Unknown button."
-        return why(t, Adb.quick(ctx, host, "input keyevent " + codes.joinToString(" ")))
+        val names = keys.split(',').map { it.trim() }.filter { KEYS.containsKey(it) }
+        if (names.isEmpty()) return "Unknown button."
+        // Fast way: write the key straight into the TV's own keyboard device (well under a millisecond).
+        // "input keyevent" starts a Java program each time: 1-2 seconds on Android 9 Fire TVs.
+        val fast = fastDevice(ctx, host)
+        if (fast != null && names.all { RAW.containsKey(it) }) {
+            val (dev, wide) = fast
+            val bytes = StringBuilder()
+            names.forEach { n -> val c = RAW.getValue(n); bytes.append(ev(1, c, 1, wide)).append(ev(0, 0, 0, wide)).append(ev(1, c, 0, wide)).append(ev(0, 0, 0, wide)) }
+            val r = Adb.quick(ctx, host, "print -n '$bytes' >$dev")
+            if (r == "ok") return "ok"
+        }
+        return why(t, Adb.quick(ctx, host, "input keyevent " + names.joinToString(" ") { KEYS.getValue(it).toString() }))
+    }
+
+    /** Linux key codes the Fire TV's "amzkeyboard" device turns into these buttons (from its amzkeyboard.kl). */
+    private val RAW = mapOf(
+        "up" to 103, "down" to 108, "left" to 105, "right" to 106, "ok" to 353,
+        "back" to 158, "home" to 172, "menu" to 139,
+        "playpause" to 164, "rew" to 168, "ff" to 208, "next" to 163, "prev" to 165,
+        "volup" to 115, "voldown" to 114, "mute" to 113, "power" to 116,
+    )
+
+    /** One input_event (time 0, type, code, value) as \xHH escapes for the shell's print: 16 bytes on 32-bit TVs, 24 on 64-bit. */
+    private fun ev(type: Int, code: Int, value: Int, wide: Boolean): String {
+        val b = java.nio.ByteBuffer.allocate(if (wide) 24 else 16).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+        if (wide) b.putLong(0).putLong(0) else b.putInt(0).putInt(0)
+        b.putShort(type.toShort()).putShort(code.toShort()).putInt(value)
+        return b.array().joinToString("") { "\\x%02x".format(it.toInt() and 0xFF) }
+    }
+
+    // which /dev/input device takes the fast way on each TV ("" = none, use the slow way)
+    private val fastDev = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun fastDevice(ctx: Context, host: String): Pair<String, Boolean>? {
+        fastDev[host]?.let { v -> return if (v.isEmpty()) null else Pair(v.substringBefore('|'), v.endsWith("|64")) }
+        val out = Adb.shell(ctx, host, "for f in /sys/class/input/event*; do grep -q '^amzkeyboard\$' \$f/device/name 2>/dev/null && [ -w /dev/input/\${f##*/} ] && echo /dev/input/\${f##*/}; done; echo end")
+            ?: return null   // couldn't ask: try again next time
+        val dev = out.lines().map { it.trim() }.firstOrNull { it.startsWith("/dev/input/event") } ?: ""
+        if (dev.isEmpty()) { fastDev[host] = ""; return null }
+        val wide = Adb.shell(ctx, host, "getprop ro.product.cpu.abi")?.trim()?.let { it.startsWith("arm64") || it.startsWith("x86_64") } ?: return null
+        fastDev[host] = dev + if (wide) "|64" else "|32"
+        return Pair(dev, wide)
     }
 
     /** Types into whatever box is open on the TV (search, sign-in…). */

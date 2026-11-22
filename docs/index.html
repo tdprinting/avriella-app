@@ -285,12 +285,20 @@
     padding: calc(env(safe-area-inset-top) + 10px) 18px calc(env(safe-area-inset-bottom) + 18px);
     background: radial-gradient(120% 70% at 50% 0%, #2a2350 0%, #0d0e1f 60%, #07070f 100%); animation: fade .25s ease both; user-select: none; -webkit-user-select: none; }
   .remote.hidden { display: none; }
-  .rm-top { display: flex; align-items: center; justify-content: space-between; font-size: 20px; }
+  .remote > * { flex-shrink: 0; }   /* never squash the TV buttons when the remote is taller than the screen */
+  .rm-top { display: flex; align-items: center; gap: 10px; font-size: 20px; }
+  .rm-top b { flex: 1; }
+  .rm-again { min-height: 0; height: 36px; padding: 0 14px; border-radius: 999px; background: var(--surface-2); font-size: 13px; font-weight: 700; color: var(--sub); }
+  .rm-label { margin: 14px 2px 8px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
   .rm-x { width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; }
-  .rm-tvs { display: flex; gap: 8px; overflow-x: auto; padding: 14px 0 4px; scrollbar-width: none; }
-  .rm-tvs::-webkit-scrollbar { display: none; }
-  .rm-tvs button { flex: none; min-height: 0; padding: 9px 15px; border-radius: 999px; background: var(--surface-2); font-size: 13.5px; font-weight: 700; color: var(--sub); }
-  .rm-tvs button.on { background: var(--glow); color: var(--on-glow); }
+  .rm-tvs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .rm-tvs button { display: flex; align-items: center; gap: 8px; min-height: 0; height: 52px; padding: 0 12px; border-radius: 16px; background: var(--surface-2);
+    border: 2px solid transparent; font-size: 14.5px; font-weight: 750; color: var(--ink); text-align: left; line-height: 1.15; }
+  .rm-tvs button .dot { width: 10px; height: 10px; flex: none; border-radius: 50%; border: 2px solid var(--faint); }
+  .rm-tvs button span:last-child { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .rm-tvs button.on { background: var(--glow); color: var(--on-glow); box-shadow: 0 8px 22px rgba(247,143,179,.3); }
+  .rm-tvs button.on .dot { border-color: var(--on-glow); background: var(--on-glow); }
+  .rm-tvs:empty::before { content: "Looking for Fire TVs…"; grid-column: 1 / -1; padding: 14px; text-align: center; color: var(--sub); font-size: 13px; }
   .rm-msg { min-height: 18px; margin: 6px 2px 4px; font-size: 12.5px; font-weight: 600; color: var(--sub); text-align: center; }
   .rm-msg.err { color: #ffb4b4; }
   .rm-body { width: 100%; max-width: 360px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
@@ -1009,8 +1017,10 @@
 <div class="remote hidden" id="remote" role="dialog" aria-label="TV remote">
   <div class="rm-top">
     <b>TV remote</b>
+    <button class="rm-again" id="rmAgain" aria-label="Look for TVs again">↻ Find TVs</button>
     <button class="rm-x" id="rmClose" aria-label="Close"><svg class="i"><use href="#i-close"/></svg></button>
   </div>
+  <div class="rm-label">Which TV?</div>
   <div class="rm-tvs" id="rmTvs"></div>
   <div class="rm-msg" id="rmMsg">Looking for Fire TVs…</div>
   <div class="rm-body">
@@ -3106,8 +3116,11 @@
   function rmDrawTvs(list) {
     rmTvList = list;
     var row = $("rmTvs"); row.innerHTML = "";
-    list.forEach(function (t) { var b = mk("button", "", row); b.textContent = t.name; b.dataset.host = t.host; b.onclick = function () { rmPickTv(t.host); }; });
-    var again = mk("button", "", row); again.textContent = "↻"; again.setAttribute("aria-label", "Look again"); again.onclick = function () { rmLoad(true); };
+    list.forEach(function (t) {
+      var b = mk("button", "", row); b.dataset.host = t.host;
+      mk("span", "dot", b); mk("span", "", b).textContent = t.name;
+      b.onclick = function () { rmPickTv(t.host); if (navigator.vibrate) try { navigator.vibrate(10); } catch (x) {} };
+    });
     var want = rmHost || rmStore("rmHost");
     var pick = list.filter(function (t) { return t.host === want; })[0] || list[0];
     if (pick && pick.host !== rmHost) rmPickTv(pick.host);
@@ -3132,6 +3145,7 @@
     if (typeof streaming !== "undefined" && streaming && typeof stopStream === "function") { stopStream(); rmPausedCam = true; }
   }
   $("remoteOpen").onclick = rmOpen;
+  $("rmAgain").onclick = function () { rmLoad(true); };
   $("rmBtn").onclick = function () {
     if (window._rmLaunch && !$("launcher").classList.contains("hidden")) return window._rmLaunch();
     rmOpen();

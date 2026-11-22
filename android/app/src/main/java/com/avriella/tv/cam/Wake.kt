@@ -49,6 +49,16 @@ object Wake {
         } catch (e: Exception) { android.util.Log.w("AvriellaRemote", "couldn't bring the app forward", e) }
     }
 
+    /** Brings Avriella TV to the front without lighting the screen (Android only lends the camera to the app on screen). */
+    fun bringForward() {
+        val a = top?.get()?.takeIf { !it.isFinishing && !it.isDestroyed }
+        val cls = a?.javaClass ?: MainActivity::class.java
+        try {
+            ctx.startActivity(Intent(ctx, cls).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+        } catch (e: Exception) { android.util.Log.w("AvriellaRemote", "couldn't bring the app forward", e) }
+    }
+
     // ---------- screen off ----------
     private val dpm get() = ctx.getSystemService(Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
     private val admin get() = android.content.ComponentName(ctx, com.avriella.tv.kid.AdminReceiver::class.java)
