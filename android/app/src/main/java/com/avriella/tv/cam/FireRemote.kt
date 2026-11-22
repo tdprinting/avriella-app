@@ -125,12 +125,14 @@ object FireRemote {
     private val fastDev = java.util.concurrent.ConcurrentHashMap<String, String>()
     private fun fastDevice(ctx: Context, host: String): Pair<String, Boolean>? {
         fastDev[host]?.let { v -> return if (v.isEmpty()) null else Pair(v.substringBefore('|'), v.endsWith("|64")) }
-        val out = Adb.shell(ctx, host, "for f in /sys/class/input/event*; do grep -q '^amzkeyboard\$' \$f/device/name 2>/dev/null && [ -w /dev/input/\${f##*/} ] && echo /dev/input/\${f##*/}; done; echo end")
+        // (the device names in /sys aren't readable over ADB on Fire TVs; getevent can list them)
+        val out = Adb.shell(ctx, host, "d=\$(getevent -p 2>/dev/null | grep -B1 '\"amzkeyboard\"' | grep -o '/dev/input/event[0-9]*' | head -1); [ -n \"\$d\" ] && [ -w \"\$d\" ] && echo \$d; echo end")
             ?: return null   // couldn't ask: try again next time
         val dev = out.lines().map { it.trim() }.firstOrNull { it.startsWith("/dev/input/event") } ?: ""
-        if (dev.isEmpty()) { fastDev[host] = ""; return null }
+        if (dev.isEmpty()) { fastDev[host] = ""; android.util.Log.i("FireRemote", "no fast keys on $host"); return null }
         val wide = Adb.shell(ctx, host, "getprop ro.product.cpu.abi")?.trim()?.let { it.startsWith("arm64") || it.startsWith("x86_64") } ?: return null
         fastDev[host] = dev + if (wide) "|64" else "|32"
+        android.util.Log.i("FireRemote", "fast keys on $host via $dev (${if (wide) 64 else 32}-bit)")
         return Pair(dev, wide)
     }
 
