@@ -111,7 +111,57 @@ object FireRemote {
         "back" to 158, "home" to 172, "menu" to 139,
         "playpause" to 164, "rew" to 168, "ff" to 208, "next" to 163, "prev" to 165,
         "volup" to 115, "voldown" to 114, "mute" to 113, "power" to 116,
+        "del" to 14, "sleep" to 142, "wake" to 143,
     )
+
+    /** Letters, numbers and a few signs on the TV's keyboard device: key code, and whether Shift is held. */
+    private val CHARS: Map<Char, Pair<Int, Boolean>> by lazy {
+        val m = HashMap<Char, Pair<Int, Boolean>>()
+        "qwertyuiop".forEachIndexed { i, c -> m[c] = Pair(16 + i, false) }
+        "asdfghjkl".forEachIndexed { i, c -> m[c] = Pair(30 + i, false) }
+        "zxcvbnm".forEachIndexed { i, c -> m[c] = Pair(44 + i, false) }
+        "1234567890".forEachIndexed { i, c -> m[c] = Pair(2 + i, false) }
+        m.keys.filter { it.isLetter() }.toList().forEach { c -> m[c.uppercaseChar()] = Pair(m.getValue(c).first, true) }
+        mapOf(' ' to 57, '.' to 52, ',' to 51, '-' to 12, '/' to 53, '\'' to 40, ';' to 39, '=' to 13).forEach { (c, k) -> m[c] = Pair(k, false) }
+        mapOf('!' to 2, '@' to 3, '#' to 4, '&' to 8, '?' to 53, '_' to 12, ':' to 39, '"' to 40, '+' to 13).forEach { (c, k) -> m[c] = Pair(k, true) }
+        m
+    }
+
+    private fun tap(sb: StringBuilder, code: Int, wide: Boolean) {
+        sb.append(ev(1, code, 1, wide)).append(ev(0, 0, 0, wide)).append(ev(1, code, 0, wide)).append(ev(0, 0, 0, wide))
+    }
+
+    /** Opens a page of the TV's settings, the quick menu, or puts the TV to sleep. */
+    fun settings(ctx: Context, host: String, which: String): String {
+        val t = tv(host) ?: return "Couldn't find that TV."
+        val v2 = "-p com.amazon.tv.settings.v2"
+        val cmd = when (which) {
+            "quick" -> {
+                // the Fire TV quick menu: hold Home for a second
+                val fast = fastDevice(ctx, host)
+                if (fast != null) { val (dev, w) = fast
+                    "print -n '${ev(1, 172, 1, w)}${ev(0, 0, 0, w)}' >$dev; sleep 1; print -n '${ev(1, 172, 0, w)}${ev(0, 0, 0, w)}' >$dev"
+                } else "input keyevent --longpress 3"
+            }
+            "sleep" -> return key(ctx, host, "sleep")
+            else -> {
+                val target = when (which) {
+                    "picture" -> listOf("-a com.amazon.tv.settings.action.PICTURE_SETTINGS", "-a com.amazon.device.settings.action.DISPLAY_AND_SOUNDS $v2")
+                    "display" -> listOf("-a com.amazon.device.settings.action.DISPLAY_AND_SOUNDS $v2")
+                    "network" -> listOf("-a android.settings.WIFI_SETTINGS")
+                    "remotes" -> listOf("-a com.amazon.device.settings.action.CONTROLLERS $v2")
+                    "apps" -> listOf("-a android.settings.APPLICATION_SETTINGS")
+                    "captions" -> listOf("-a com.amazon.device.settings.action.ACCESSIBILITY_CLOSED_CAPTION $v2")
+                    "about" -> listOf("-a android.settings.DEVICE_INFO_SETTINGS")
+                    "all" -> emptyList()
+                    else -> return "Unknown setting."
+                }
+                // try each page in turn; the first one this Fire TV has opens (am prints "Error" when it doesn't)
+                (target + "-a android.settings.SETTINGS").joinToString(" || ") { "! am start $it 2>&1 | grep -q Error" }
+            }
+        }
+        return why(t, Adb.quick(ctx, host, cmd))
+    }
 
     /** One input_event (time 0, type, code, value) as \xHH escapes for the shell's print: 16 bytes on 32-bit TVs, 24 on 64-bit. */
     private fun ev(type: Int, code: Int, value: Int, wide: Boolean): String {
@@ -139,6 +189,24 @@ object FireRemote {
     /** Types into whatever box is open on the TV (search, sign-in…). */
     fun text(ctx: Context, host: String, text: String): String {
         val t = tv(host) ?: return "Couldn't find that TV."
+        // fast way: type it on the TV's keyboard device, a few letters per line (the shell's line has a size limit)
+        val fast = fastDevice(ctx, host)
+        val typed = text.take(200).filter { CHARS.containsKey(it) }
+        if (fast != null && typed.isNotEmpty()) {
+            val (dev, w) = fast
+            var ok = true
+            typed.chunked(8).forEach { part ->
+                val sb = StringBuilder()
+                part.forEach { c ->
+                    val (code, shift) = CHARS.getValue(c)
+                    if (shift) sb.append(ev(1, 42, 1, w)).append(ev(0, 0, 0, w))
+                    tap(sb, code, w)
+                    if (shift) sb.append(ev(1, 42, 0, w)).append(ev(0, 0, 0, w))
+                }
+                if (ok && Adb.quick(ctx, host, "print -n '$sb' >$dev") != "ok") ok = false
+            }
+            if (ok) return "ok"
+        }
         val safe = text.filter { it.isLetterOrDigit() || it in " .,-_@!?" }.take(200).replace(" ", "%s")
         if (safe.isEmpty()) return "Type some letters first."
         return why(t, Adb.quick(ctx, host, "input text '$safe'"))

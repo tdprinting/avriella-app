@@ -175,13 +175,14 @@ class CamServer(private val ctx: Context, private val cam: FrontCamera) {
                 // ---- backup remote for the Fire TVs ----
                 "/api/cast/rtvs" -> if (authed) send(out, 200, "application/json", JSONObject().put("tvs", FireRemote.tvs(ctx, query["fresh"] == "1")).toString().toByteArray()) else denied(out)
                 "/api/cast/rapps" -> if (authed) send(out, 200, "application/json", JSONObject().put("apps", FireRemote.apps(ctx, query["host"] ?: "")).toString().toByteArray()) else denied(out)
-                "/api/cast/rkey", "/api/cast/rtext", "/api/cast/rlaunch", "/api/cast/rshelf", "/api/cast/rwarm" -> if (authed) {
+                "/api/cast/rkey", "/api/cast/rtext", "/api/cast/rlaunch", "/api/cast/rshelf", "/api/cast/rwarm", "/api/cast/rset" -> if (authed) {
                     val h = query["host"] ?: ""
                     val res = when (path) {
                         "/api/cast/rkey" -> FireRemote.key(ctx, h, query["key"] ?: "")
                         "/api/cast/rtext" -> FireRemote.text(ctx, h, query["text"] ?: "")
                         "/api/cast/rlaunch" -> FireRemote.launch(ctx, h, query["pkg"] ?: "")
                         "/api/cast/rwarm" -> FireRemote.warm(ctx, h)
+                        "/api/cast/rset" -> FireRemote.settings(ctx, h, query["which"] ?: "all")
                         else -> FireRemote.shelf(ctx, h)
                     }
                     send(out, 200, "application/json", (if (res == "ok") JSONObject().put("ok", true) else JSONObject().put("error", res)).toString().toByteArray())

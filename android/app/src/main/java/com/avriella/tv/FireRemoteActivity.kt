@@ -53,7 +53,30 @@ class FireRemoteActivity : ParentActivity() {
 
         val c = card(18)
         c.gravity = Gravity.CENTER_HORIZONTAL
-        c.addView(row3(round("⭕", "Power") { key("power") }, round("⌂", "Home") { key("home") }, round("☰", "Options") { key("menu") }))
+        // TV settings: one tap opens that page on the TV, then the panel folds away so the arrows are right there
+        val setPanel = vbox().apply { visibility = View.GONE; setPadding(0, dp(12), 0, 0) }
+        lateinit var setBtn: View
+        c.addView(row3(round("⭕", "Power") { key("power") }, round("⌂", "Home") { key("home") }, round("☰", "Options") { key("menu") },
+            round("⚙️", "Settings") {
+                val open = setPanel.visibility != View.VISIBLE
+                setPanel.visibility = if (open) View.VISIBLE else View.GONE
+                ((setBtn as LinearLayout).background as GradientDrawable).setColor(if (open) Pal.ORANGE else Pal.CARD)
+            }.also { setBtn = it }))
+        listOf("⚡  Quick menu" to "quick", "🖼️  Picture" to "picture", "🔊  Display & sound" to "display",
+            "📶  Wi-Fi" to "network", "🎮  Remotes" to "remotes", "📱  Apps" to "apps",
+            "💬  Captions" to "captions", "😴  Sleep TV" to "sleep", "⚙️  All settings" to "all").chunked(3).forEach { rowItems ->
+            val r = hbox()
+            rowItems.forEachIndexed { i, (label, which) ->
+                r.addView(pill(label, Pal.CARD, Pal.INK, 13f) {
+                    say("Opening ${label.substringAfter("  ")} on the TV…", false)
+                    send { FireRemote.settings(this, host, which) }
+                    setPanel.visibility = View.GONE
+                    ((setBtn as LinearLayout).background as GradientDrawable).setColor(Pal.CARD)
+                }, lp(0, dp(56), 1f, l = if (i > 0) dp(4) else 0, r = if (i < 2) dp(4) else 0))
+            }
+            setPanel.addView(r, lp(t = dp(6)))
+        }
+        c.addView(setPanel, lp(MATCH, WRAP))
         c.addView(Dpad(this) { k -> key(k) }, lp(dp(250), dp(250), t = dp(14), b = dp(14)))
         c.addView(row3(round("↩", "Back") { key("back") }, round("⏯", "Play", Pal.ORANGE, Color.WHITE) { key("playpause") }, round("🔇", "Mute") { key("mute") }))
         val vol = hbox().apply { gravity = Gravity.CENTER }
@@ -163,9 +186,9 @@ class FireRemoteActivity : ParentActivity() {
 
     // ---------- buttons ----------
 
-    private fun row3(a: View, b: View, c: View) = hbox().apply {
+    private fun row3(vararg views: View) = hbox().apply {
         gravity = Gravity.CENTER
-        listOf(a, b, c).forEach { v -> addView(LinearLayout(context).apply { gravity = Gravity.CENTER; addView(v) }, lp(0, WRAP, 1f)) }
+        views.forEach { v -> addView(LinearLayout(context).apply { gravity = Gravity.CENTER; addView(v) }, lp(0, WRAP, 1f)) }
     }
 
     private fun round(icon: String, name: String, bg: Int = Pal.CARD, fg: Int = Pal.INK, hold: Boolean = false, onTap: () -> Unit): View {
