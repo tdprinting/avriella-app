@@ -142,6 +142,10 @@ class MainActivity : ParentActivity() {
         val s = Library.settings
         titleView.text = ""
         body.addView(hero(s.childName), lp(t = dp(2)))
+        // the Fire TV remote, one tap from the start screen
+        body.addView(pill("🎮  TV remote", Pal.PURPLE, Color.WHITE, 17f) {
+            startActivity(Intent(this, FireRemoteActivity::class.java))
+        }, lp(MATCH, WRAP, t = dp(12)))
         body.addView(label("Tap ▶ on anything and it starts locked. To come back here, hold BOTH volume buttons for 1 second.", 13f, Pal.SUB).apply {
             setPadding(dp(8), dp(10), dp(8), dp(2))
         })
@@ -159,9 +163,6 @@ class MainActivity : ParentActivity() {
                 }, lp(MATCH, WRAP, t = dp(12)))
             }
             continueCard()?.let { body.addView(it, lp(t = dp(12))) }
-            body.addView(pill("🎮  TV remote — control the Fire TVs", Pal.CARD, Pal.INK, 16f) {
-                startActivity(Intent(this, FireRemoteActivity::class.java))
-            }, lp(MATCH, WRAP, t = dp(12)))
 
             val shows = Library.shows()
             body.addView(badge("📺", "Shows", Pal.BLUE))

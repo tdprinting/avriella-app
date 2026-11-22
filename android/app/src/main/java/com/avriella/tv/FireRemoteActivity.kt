@@ -53,7 +53,7 @@ class FireRemoteActivity : ParentActivity() {
 
         val c = card(18)
         c.gravity = Gravity.CENTER_HORIZONTAL
-        c.addView(row3(round("⏻", "Power") { key("power") }, round("⌂", "Home") { key("home") }, round("☰", "Options") { key("menu") }))
+        c.addView(row3(round("⭕", "Power") { key("power") }, round("⌂", "Home") { key("home") }, round("☰", "Options") { key("menu") }))
         c.addView(Dpad(this) { k -> key(k) }, lp(dp(250), dp(250), t = dp(14), b = dp(14)))
         c.addView(row3(round("↩", "Back") { key("back") }, round("⏯", "Play", Pal.ORANGE, Color.WHITE) { key("playpause") }, round("🔇", "Mute") { key("mute") }))
         val vol = hbox().apply { gravity = Gravity.CENTER }
@@ -133,6 +133,7 @@ class FireRemoteActivity : ParentActivity() {
     private fun pick(h: String) {
         host = h
         getSharedPreferences("remote", Context.MODE_PRIVATE).edit().putString("host", h).apply()
+        line.execute { try { FireRemote.warm(this, h) } catch (_: Exception) {} }   // connect now so the first press is instant
         apps.removeAllViews()
         val grid = mutableListOf<View>(pill("📀  Her DVD shelf", Pal.ORANGE, Color.WHITE, 15f) { send { FireRemote.shelf(this, host) } })
         layoutApps(grid)
@@ -173,7 +174,7 @@ class FireRemoteActivity : ParentActivity() {
             gravity = Gravity.CENTER
             background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(bg); setStroke(dp(1), 0x14000000) }
             elevation = dp(4).toFloat()
-            addView(TextView(context).apply { text = icon; textSize = if (name.isEmpty()) 20f else 22f; setTextColor(if (icon == "⏻") 0xFFE85D5D.toInt() else fg); gravity = Gravity.CENTER })
+            addView(TextView(context).apply { text = icon; textSize = if (name.isEmpty()) 20f else 22f; setTextColor(if (icon == "⭕") 0xFFE85D5D.toInt() else fg); gravity = Gravity.CENTER })
             if (name.isNotEmpty()) addView(TextView(context).apply { text = name; textSize = 10f; setTextColor(if (bg == Pal.CARD) Pal.SUB else fg); typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER })
             layoutParams = LinearLayout.LayoutParams(size, size)
         }

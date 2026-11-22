@@ -1,6 +1,7 @@
 package com.avriella.tv.cam
 
 import android.content.Context
+import com.avriella.tv.data.Library
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -46,15 +47,38 @@ object FireRemote {
     private val appsCache = java.util.concurrent.ConcurrentHashMap<String, JSONArray>()
 
     fun tvs(ctx: Context, fresh: Boolean = false): JSONArray {
-        if (fresh || known.isEmpty() || System.currentTimeMillis() - scannedAt > 5 * 60_000) {
-            val found = Cast.fireTvs(ctx).distinctBy { it.host }.map { Tv(it.name, it.host) }
-            if (found.isNotEmpty() || known.isEmpty()) known = found.sortedBy { it.name.lowercase() }
-            scannedAt = System.currentTimeMillis()
-        }
+        if (known.isEmpty()) known = remembered(ctx)
+        if (fresh || known.isEmpty()) rescan(ctx)
+        else if (System.currentTimeMillis() - scannedAt > 5 * 60_000) Thread { rescan(ctx) }.start()   // answer now, refresh behind
         return JSONArray().apply { known.forEach { put(JSONObject().put("name", it.name).put("host", it.host)) } }
     }
 
-    private fun tv(host: String): Tv? = known.firstOrNull { it.host == host }
+    @Synchronized private fun rescan(ctx: Context) {
+        val found = Cast.fireTvs(ctx).distinctBy { it.host }.map { Tv(it.name, it.host) }
+        scannedAt = System.currentTimeMillis()
+        if (found.isEmpty()) return
+        known = found.sortedBy { it.name.lowercase() }
+        val arr = JSONArray().apply { known.forEach { put(JSONObject().put("name", it.name).put("host", it.host)) } }
+        ctx.getSharedPreferences("fire_remote", Context.MODE_PRIVATE).edit().putString("tvs", arr.toString()).apply()
+    }
+
+    // the TVs from last time, so the remote is ready the moment it opens
+    private fun remembered(ctx: Context): List<Tv> = try {
+        val a = JSONArray(ctx.getSharedPreferences("fire_remote", Context.MODE_PRIVATE).getString("tvs", "[]"))
+        (0 until a.length()).map { Tv(a.getJSONObject(it).getString("name"), a.getJSONObject(it).getString("host")) }
+    } catch (_: Exception) { emptyList() }
+
+    private fun tv(host: String): Tv? {
+        known.firstOrNull { it.host == host }?.let { return it }
+        if (known.isEmpty()) known = remembered(Library.appCtx)
+        return known.firstOrNull { it.host == host }
+    }
+
+    /** Opens the connection to the TV ahead of the first press. */
+    fun warm(ctx: Context, host: String): String {
+        val t = tv(host) ?: return "Couldn't find that TV."
+        return why(t, Adb.quick(ctx, host, ":"))
+    }
 
     private fun why(t: Tv, r: String) = when (r) {
         "ok" -> "ok"

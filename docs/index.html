@@ -275,6 +275,7 @@
   .vid .mini { height: 3px; border-radius: 3px; background: var(--surface-3); margin-top: 7px; overflow: hidden; }
   .vid .mini i { display: block; height: 100%; background: var(--glow); }
   /* the backup TV remote */
+  .rm-btn { background: var(--glow); color: var(--on-glow); margin-right: 8px; }
   .remote-entry { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; padding: 14px 16px; min-height: 0; color: var(--ink); }
   .remote-entry .re-ico { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--glow); color: var(--on-glow); flex: none; }
   .remote-entry .re-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -694,6 +695,7 @@
     <h1 id="title">Baby Cam</h1>
     <small><span class="dot" id="dot"></span><span id="sub">Nightlight for parents</span></small>
   </div>
+  <button class="round rm-btn hidden" id="rmBtn" aria-label="TV remote" title="TV remote"><svg viewBox="0 0 24 24" class="i sm"><rect x="7" y="2.5" width="10" height="19" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="8" r="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 13.5h4M10 16.5h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   <button class="round torch hidden" id="torch" aria-label="Turn on your flashlight" title="Flashlight"><svg class="i"><use href="#i-torch"/></svg></button>
   <button class="round hidden" id="logout" aria-label="Change the code" title="Change the code"><svg class="i sm"><use href="#i-key"/></svg></button>
 </header>
@@ -719,6 +721,7 @@
       <button class="btn-main" id="openNow"><svg class="i sm"><use href="#i-play"/></svg>Open now</button>
       <button class="btn-soft" id="change">Change</button>
     </div>
+    <button class="wide btn-soft" id="rmLaunch" style="margin-top:10px"><svg class="i sm"><use href="#i-tv"/></svg>TV remote</button>
     <button class="wide btn-soft hidden" id="relayGo" style="margin-top:10px"><svg class="i sm"><use href="#i-globe"/></svg>Connect from anywhere</button>
     <div class="seg flat" id="placeSeg" style="margin-top:14px">
       <button data-v="home"><svg class="i sm"><use href="#i-home"/></svg>Home Wi-Fi</button>
@@ -1012,7 +1015,7 @@
   <div class="rm-msg" id="rmMsg">Looking for Fire TVs…</div>
   <div class="rm-body">
     <div class="rm-row3">
-      <button data-k="power" class="rm-power" aria-label="Power"><span>⏻</span><small>Power</small></button>
+      <button data-k="power" class="rm-power" aria-label="Power"><span>⭕</span><small>Power</small></button>
       <button data-k="home" aria-label="Home"><svg class="i"><use href="#i-home"/></svg><small>Home</small></button>
       <button data-k="menu" aria-label="Options"><span>☰</span><small>Options</small></button>
     </div>
@@ -1122,6 +1125,7 @@
     ["launcher", "login", "viewer"].forEach(function (s) { $(s).classList.toggle("hidden", s !== id); });
     $("logout").classList.toggle("hidden", id !== "viewer");
     $("torch").classList.toggle("hidden", id !== "viewer");
+    $("rmBtn").classList.toggle("hidden", id === "login");
     $("tabbar").classList.toggle("hidden", id !== "viewer");
     document.body.classList.toggle("app", id === "viewer");
     if (id === "viewer") setTab(curTab, false);
@@ -1480,13 +1484,14 @@
         img.src = "http://" + a + "/icon.png?t=" + Date.now();
       });
     }
-    function autoGo() {
+    function autoGo(remote) {
       clearTimeout(autoTimer);
       var list = candidates(), left = list.length, won = false;
+      var c0 = store.get("lcode"), tail = remote === true ? "#" + (c0 ? "code=" + c0 + "&" : "") + "remote" : "";
       list.forEach(function (a) {
         ping(a).then(function (ok) {
           left--;
-          if (ok && !won) { won = true; store.set("lastSeen", ok); location.href = "http://" + ok + "/"; }
+          if (ok && !won) { won = true; store.set("lastSeen", ok); location.href = "http://" + ok + "/" + tail; }
           else if (left === 0 && !won && store.get("relayKey") && store.get("manual") !== "1") goRelay();
           else if (left === 0 && !won) {
             // Nothing answered a quick check. Away from home, her Tailscale address is the one that works
@@ -1549,7 +1554,15 @@
       if (c) store.set("lcode", c); else store.del("lcode");
       go();
     };
-    $("openNow").onclick = autoGo;
+    $("openNow").onclick = function () { autoGo(); };
+    // straight to the TV remote (no camera): her phone does the talking to the Fire TVs
+    window._rmLaunch = function () {
+      clearTimeout(autoTimer);
+      $("connTitle").textContent = "Opening the TV remote…";
+      $("connecting").querySelector(".loader").style.display = "";
+      autoGo(true);
+    };
+    $("rmLaunch").onclick = window._rmLaunch;
     $("change").onclick = showSetup;
     // Coming back to the app later re-opens the cam automatically.
     window.addEventListener("pageshow", function (e) { if (e.persisted && target()) showConnecting(); });
@@ -2372,6 +2385,7 @@
 
   function startViewer() {
     show("viewer");
+    if (window._rmPending) { window._rmPending = false; setTimeout(function () { $("remoteOpen").click(); }, 50); }
     renderCams(); loadTapo(); if (!window._tapoT) window._tapoT = setInterval(loadTapo, 30000);
     layout();
     pollInfo();
@@ -3074,30 +3088,63 @@
   function rmPickTv(host) {
     rmHost = host; rmStore("rmHost", host);
     [].forEach.call($("rmTvs").children, function (b) { b.classList.toggle("on", b.dataset.host === host); });
-    var apps = $("rmApps"); apps.innerHTML = "";
-    var sh = mk("button", "shelf", apps); sh.textContent = "📀 Her DVD shelf";
-    sh.onclick = function () { rmSend("rshelf"); };
+    function drawApps(list) {
+      var apps = $("rmApps"); apps.innerHTML = "";
+      var sh = mk("button", "shelf", apps); sh.textContent = "📀 Her DVD shelf";
+      sh.onclick = function () { rmSend("rshelf"); };
+      list.forEach(function (a) { var b = mk("button", "", apps); b.textContent = a.name; b.onclick = function () { rmSend("rlaunch", "&pkg=" + encodeURIComponent(a.pkg)); }; });
+    }
+    var cached = []; try { cached = JSON.parse(rmStore("rmApps:" + host) || "[]"); } catch (e) {}
+    drawApps(cached);
+    cjson("rwarm", "&host=" + encodeURIComponent(host)).catch(function () {});
     cjson("rapps", "&host=" + encodeURIComponent(host)).then(function (j) {
-      if (rmHost !== host) return;
-      (j.apps || []).forEach(function (a) { var b = mk("button", "", apps); b.textContent = a.name; b.onclick = function () { rmSend("rlaunch", "&pkg=" + encodeURIComponent(a.pkg)); }; });
+      if (rmHost !== host || !(j.apps || []).length) return;
+      rmStore("rmApps:" + host, JSON.stringify(j.apps));
+      if (JSON.stringify(j.apps) !== JSON.stringify(cached)) drawApps(j.apps);
     }).catch(function () {});
   }
-  function rmLoad(fresh) {
-    rmSay("Looking for Fire TVs…");
-    cjson("rtvs", fresh ? "&fresh=1" : "").then(function (j) {
-      rmTvList = j.tvs || [];
-      var row = $("rmTvs"); row.innerHTML = "";
-      if (!rmTvList.length) { rmSay("No Fire TVs found. Make sure they're on and on the same Wi-Fi as her phone.", true); }
-      else rmSay("");
-      rmTvList.forEach(function (t) { var b = mk("button", "", row); b.textContent = t.name; b.dataset.host = t.host; b.onclick = function () { rmPickTv(t.host); }; });
-      var again = mk("button", "", row); again.textContent = "↻"; again.setAttribute("aria-label", "Look again"); again.onclick = function () { rmLoad(true); };
-      var want = rmHost || rmStore("rmHost");
-      var pick = rmTvList.filter(function (t) { return t.host === want; })[0] || rmTvList[0];
-      if (pick) rmPickTv(pick.host);
-    }).catch(function (e) { rmSay(e.message || "Couldn't reach her phone.", true); });
+  function rmDrawTvs(list) {
+    rmTvList = list;
+    var row = $("rmTvs"); row.innerHTML = "";
+    list.forEach(function (t) { var b = mk("button", "", row); b.textContent = t.name; b.dataset.host = t.host; b.onclick = function () { rmPickTv(t.host); }; });
+    var again = mk("button", "", row); again.textContent = "↻"; again.setAttribute("aria-label", "Look again"); again.onclick = function () { rmLoad(true); };
+    var want = rmHost || rmStore("rmHost");
+    var pick = list.filter(function (t) { return t.host === want; })[0] || list[0];
+    if (pick && pick.host !== rmHost) rmPickTv(pick.host);
+    else if (pick) [].forEach.call(row.children, function (b) { b.classList.toggle("on", b.dataset.host === rmHost); });
   }
-  $("remoteOpen").onclick = function () { $("remote").classList.remove("hidden"); rmLoad(false); };
-  $("rmClose").onclick = function () { $("remote").classList.add("hidden"); };
+  function rmLoad(fresh) {
+    var saved = []; try { saved = JSON.parse(rmStore("rmTvs") || "[]"); } catch (e) {}
+    if (!fresh && saved.length && !rmTvList.length) rmDrawTvs(saved);   // ready to press straight away
+    if (!saved.length || fresh) rmSay("Looking for Fire TVs…");
+    cjson("rtvs", fresh ? "&fresh=1" : "").then(function (j) {
+      var list = j.tvs || [];
+      if (!list.length) { if (!rmTvList.length) rmSay("No Fire TVs found. Make sure they're on and on the same Wi-Fi as her phone.", true); return; }
+      rmStore("rmTvs", JSON.stringify(list));
+      if (fresh || JSON.stringify(list) !== JSON.stringify(rmTvList)) rmDrawTvs(list);
+      if (!rmBusy) rmSay("");
+    }).catch(function (e) { if (!rmTvList.length) rmSay(e.message || "Couldn't reach her phone.", true); });
+  }
+  var rmPausedCam = false;
+  function rmOpen() {
+    $("remote").classList.remove("hidden"); rmLoad(false);
+    // no camera video behind the remote: keeps her phone's Wi-Fi free so presses go through fast
+    if (typeof streaming !== "undefined" && streaming && typeof stopStream === "function") { stopStream(); rmPausedCam = true; }
+  }
+  $("remoteOpen").onclick = rmOpen;
+  $("rmBtn").onclick = function () {
+    if (window._rmLaunch && !$("launcher").classList.contains("hidden")) return window._rmLaunch();
+    rmOpen();
+  };
+  $("rmClose").onclick = function () {
+    $("remote").classList.add("hidden");
+    if (rmPausedCam) { rmPausedCam = false; if (typeof startStream === "function" && !document.hidden) startStream(); }
+  };
+  // opened from the start screen's TV remote button: go right to it
+  if (/(^#|&)remote(&|$)/.test(location.hash.replace(/^#/, "#&"))) {
+    try { history.replaceState(null, "", location.pathname + location.hash.replace(/&?remote/, "").replace(/^#$/, "")); } catch (e) {}
+    setTimeout(function () { if (!$("viewer").classList.contains("hidden")) rmOpen(); else window._rmPending = true; }, 0);
+  }
   // buttons: tap to press; hold the arrows and volume to keep pressing
   [].forEach.call(document.querySelectorAll("#remote [data-k]"), function (b) {
     var t1 = null, t2 = null;
