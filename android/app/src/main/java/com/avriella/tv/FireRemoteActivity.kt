@@ -46,8 +46,9 @@ class FireRemoteActivity : ParentActivity() {
 
     override fun build() {
         titleView.text = "🎮 TV remote"
-        tvRow = hbox()
-        body.addView(HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; addView(tvRow) }, lp(MATCH, WRAP, t = dp(4)))
+        body.addView(label("WHICH TV?", 12f, Pal.SUB, true).apply { setPadding(dp(6), 0, 0, dp(6)) }, lp(t = dp(4)))
+        tvRow = vbox()
+        body.addView(tvRow, lp(MATCH, WRAP))
         msg = label("Looking for Fire TVs…", 13f, Pal.SUB).apply { gravity = Gravity.CENTER; setPadding(dp(8), dp(8), dp(8), dp(4)) }
         body.addView(msg)
 
@@ -72,7 +73,7 @@ class FireRemoteActivity : ParentActivity() {
                     send { FireRemote.settings(this, host, which) }
                     setPanel.visibility = View.GONE
                     ((setBtn as LinearLayout).background as GradientDrawable).setColor(Pal.CARD)
-                }, lp(0, dp(56), 1f, l = if (i > 0) dp(4) else 0, r = if (i < 2) dp(4) else 0))
+                }.apply { minHeight = dp(56) }, lp(0, WRAP, 1f, l = if (i > 0) dp(4) else 0, r = if (i < 2) dp(4) else 0))
             }
             setPanel.addView(r, lp(t = dp(6)))
         }
@@ -144,12 +145,18 @@ class FireRemoteActivity : ParentActivity() {
             if (h == saved || (pickHost.isEmpty() && i == 0)) pickHost = h
         }
         if (host.isNotEmpty() && (0 until list.length()).any { list.getJSONObject(it).getString("host") == host }) pickHost = host
-        for (i in 0 until list.length()) {
+        // every TV in view at once: two big buttons per row, the one being controlled in orange
+        val buttons = (0 until list.length()).map { i ->
             val t = list.getJSONObject(i); val h = t.getString("host")
             val on = h == pickHost
-            tvRow.addView(pill(t.getString("name"), if (on) Pal.ORANGE else Pal.CARD, if (on) Color.WHITE else Pal.INK, 15f) { pick(h); showTvs(list) }, lp(WRAP, WRAP, r = dp(8)))
+            pill((if (on) "●  " else "") + t.getString("name"), if (on) Pal.ORANGE else Pal.CARD, if (on) Color.WHITE else Pal.INK, 15f) { pick(h); showTvs(list) }
+        } + pill("↻  Find TVs", Pal.CARD, Pal.SUB, 14f) { loadTvs(true) }
+        buttons.chunked(2).forEach { pair ->
+            val r = hbox()
+            pair.forEachIndexed { i, b -> r.addView(b, lp(0, WRAP, 1f, l = if (i == 1) dp(5) else 0, r = if (i == 0) dp(5) else 0)) }
+            if (pair.size == 1) r.addView(View(this), lp(0, 1, 1f, l = dp(5)))
+            tvRow.addView(r, lp(MATCH, WRAP, b = dp(8)))
         }
-        tvRow.addView(pill("↻", Pal.CARD, Pal.INK, 16f) { loadTvs(true) }, lp(WRAP, WRAP))
         if (pickHost.isNotEmpty() && pickHost != host) pick(pickHost)
     }
 
